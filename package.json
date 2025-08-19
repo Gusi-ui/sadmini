@@ -1,0 +1,47 @@
+{
+  "name": "home-care-management",
+  "version": "1.0.0",
+  "description": "Sistema completo de gestión de ayuda domiciliaria con aplicación de administración web y PWA para trabajadoras",
+  "type": "module",
+  "scripts": {
+    "setup": "chmod +x setup.sh && ./setup.sh",
+    "dev": "cd admin-web && pnpm dev",
+    "build": "cd admin-web && pnpm build",
+    "build:prod": "cd admin-web && pnpm build:prod",
+    "preview": "cd admin-web && pnpm preview",
+    "lint": "cd admin-web && pnpm lint",
+    "db:reset": "supabase db reset",
+    "db:push": "supabase db push",
+    "db:pull": "supabase db pull",
+    "gen:types": "supabase gen types typescript --local > admin-web/src/lib/database.types.ts",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop",
+    "supabase:status": "supabase status"
+  },
+  "keywords": [
+    "healthcare",
+    "home-care",
+    "management-system",
+    "react",
+    "typescript",
+    "supabase",
+    "pwa"
+  ],
+  "author": "MiniMax Agent",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "devDependencies": {
+    "supabase": "^1.200.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Gusi-ui/sadmini.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Gusi-ui/sadmini/issues"
+  },
+  "homepage": "https://github.com/Gusi-ui/sadmini#readme"
+}

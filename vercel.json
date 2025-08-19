@@ -1,0 +1,27 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "admin-web/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "admin-web/dist"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/admin-web/$1"
+    }
+  ],
+  "env": {
+    "VITE_SUPABASE_URL": "@vite_supabase_url",
+    "VITE_SUPABASE_ANON_KEY": "@vite_supabase_anon_key"
+  },
+  "functions": {
+    "admin-web/dist/**/*.js": {
+      "maxDuration": 30
+    }
+  }
+}
