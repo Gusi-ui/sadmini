@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { Loader2 } from 'lucide-react'
 import LoginPage from '@/pages/LoginPage'
+import RegisterPage from '@/pages/RegisterPage'
 import DashboardLayout from '@/components/layouts/DashboardLayout'
 import DashboardPage from '@/pages/DashboardPage'
 import WorkersPage from '@/pages/WorkersPage'
@@ -25,9 +26,14 @@ function App() {
     )
   }
 
-  // Si no hay usuario autenticado, mostrar login
+  // Si no hay usuario autenticado, mostrar login o registro
   if (!user || !profile) {
-    return <LoginPage />
+    return (
+      <Routes>
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="*" element={<LoginPage />} />
+      </Routes>
+    )
   }
 
   // Solo administradores pueden acceder a la aplicación admin

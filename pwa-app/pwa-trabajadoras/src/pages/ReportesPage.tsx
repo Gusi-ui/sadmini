@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -50,19 +50,7 @@ export default function ReportesPage({ onNavigate }: ReportesPageProps) {
   const [selectedMonth, setSelectedMonth] = useState(new Date())
   const [monthlyReport, setMonthlyReport] = useState<MonthlyReport | null>(null)
 
-  useEffect(() => {
-    if (worker) {
-      fetchAssignments()
-    }
-  }, [worker, selectedMonth])
-
-  useEffect(() => {
-    if (assignments.length > 0) {
-      generateMonthlyReport()
-    }
-  }, [assignments])
-
-  const fetchAssignments = async () => {
+  const fetchAssignments = useCallback(async () => {
     try {
       const monthStart = startOfMonth(selectedMonth)
       const monthEnd = endOfMonth(selectedMonth)
@@ -92,9 +80,9 @@ export default function ReportesPage({ onNavigate }: ReportesPageProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [worker, selectedMonth])
 
-  const generateMonthlyReport = () => {
+  const generateMonthlyReport = useCallback(() => {
     const monthStart = startOfMonth(selectedMonth)
     const monthEnd = endOfMonth(selectedMonth)
     const daysInMonth = monthEnd.getDate()
@@ -149,7 +137,19 @@ export default function ReportesPage({ onNavigate }: ReportesPageProps) {
       averageHoursPerWeek: Math.round(averageHoursPerWeek * 100) / 100,
       assignmentDetails
     })
-  }
+  }, [selectedMonth, assignments, worker])
+
+  useEffect(() => {
+    if (worker) {
+      fetchAssignments()
+    }
+  }, [worker, fetchAssignments])
+
+  useEffect(() => {
+    if (assignments.length > 0) {
+      generateMonthlyReport()
+    }
+  }, [assignments, generateMonthlyReport])
 
   const changeMonth = (direction: 'prev' | 'next') => {
     const newMonth = new Date(selectedMonth)

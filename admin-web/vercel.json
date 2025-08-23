@@ -1,0 +1,31 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ],
+  "env": {
+    "VITE_SUPABASE_URL": "@vite_supabase_url",
+    "VITE_SUPABASE_ANON_KEY": "@vite_supabase_anon_key",
+    "VITE_SUPABASE_SERVICE_ROLE_KEY": "@vite_supabase_service_role_key",
+    "VITE_APP_NAME": "Admin Panel - Cuidado Domiciliario",
+    "VITE_APP_VERSION": "1.0.0",
+    "VITE_PWA_URL": "https://trabajadoras.cuidado-domestico.com"
+  },
+  "functions": {
+    "dist/**/*.js": {
+      "maxDuration": 30
+    }
+  }
+}

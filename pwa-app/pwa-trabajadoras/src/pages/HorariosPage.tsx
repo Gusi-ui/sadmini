@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -37,13 +37,7 @@ export default function HorariosPage({ onNavigate }: HorariosPageProps) {
   const [loading, setLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState(new Date())
 
-  useEffect(() => {
-    if (worker) {
-      fetchAssignments()
-    }
-  }, [worker])
-
-  const fetchAssignments = async () => {
+  const fetchAssignments = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('assignments')
@@ -70,7 +64,13 @@ export default function HorariosPage({ onNavigate }: HorariosPageProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [worker])
+
+  useEffect(() => {
+    if (worker) {
+      fetchAssignments()
+    }
+  }, [worker, fetchAssignments])
 
   const getTodaySchedule = () => {
     const today = new Date()

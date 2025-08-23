@@ -23,7 +23,13 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
-      external: ['@tanstack/react-query']
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          supabase: ['@supabase/supabase-js'],
+          query: ['@tanstack/react-query']
+        }
+      }
     }
   }
 })

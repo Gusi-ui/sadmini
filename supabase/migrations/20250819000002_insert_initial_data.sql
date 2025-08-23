@@ -31,10 +31,12 @@ ON CONFLICT (date) DO NOTHING;
 -- Datos de ejemplo para desarrollo/testing
 -- Nota: Estos datos se pueden eliminar en producción
 
--- Insertar perfil admin de ejemplo
-INSERT INTO profiles (id, email, full_name, role, phone) VALUES
-('00000000-0000-0000-0000-000000000001', 'admin@mataro.com', 'Administrador Sistema', 'admin', '+34 600 000 001')
-ON CONFLICT (id) DO NOTHING;
+-- NOTA: Los perfiles se crearán automáticamente cuando los usuarios se registren
+-- Por ahora comentamos esta inserción para evitar errores de clave foránea
+
+-- INSERT INTO profiles (id, email, full_name, role, phone) VALUES
+-- ('00000000-0000-0000-0000-000000000001', 'admin@mataro.com', 'Administrador Sistema', 'admin', '+34 600 000 001')
+-- ON CONFLICT (id) DO NOTHING;
 
 -- Insertar trabajadoras de ejemplo
 INSERT INTO workers (id, employee_id, dni, full_name, email, phone, address, emergency_contact, emergency_phone, hire_date, is_active) VALUES

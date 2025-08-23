@@ -199,19 +199,19 @@ LANGUAGE plpgsql
 AS $$
 DECLARE
   total_hours DECIMAL(5,2) := 0;
-  current_date DATE;
+  calc_date DATE;
   end_date DATE;
   day_type VARCHAR(20);
   daily_hours DECIMAL(4,2);
 BEGIN
   -- Fecha de inicio y fin del mes
-  current_date := DATE(year_param || '-' || LPAD(month_param::TEXT, 2, '0') || '-01');
-  end_date := (current_date + INTERVAL '1 month - 1 day')::DATE;
+  calc_date := DATE(year_param || '-' || LPAD(month_param::TEXT, 2, '0') || '-01');
+  end_date := (calc_date + INTERVAL '1 month - 1 day')::DATE;
   
   -- Iterar sobre cada día del mes
-  WHILE current_date <= end_date LOOP
+  WHILE calc_date <= end_date LOOP
     -- Determinar tipo de día
-    day_type := get_day_type(current_date);
+    day_type := get_day_type(calc_date);
     
     -- Calcular horas para este día
     SELECT COALESCE(SUM(
@@ -222,13 +222,13 @@ BEGIN
     WHERE a.user_id = user_id_param
       AND a.is_active = TRUE
       AND ats.is_active = TRUE
-      AND ats.day_of_week = EXTRACT(ISODOW FROM current_date)
+      AND ats.day_of_week = EXTRACT(ISODOW FROM calc_date)
       AND ats.day_type = day_type
-      AND (a.start_date <= current_date)
-      AND (a.end_date IS NULL OR a.end_date >= current_date);
+      AND (a.start_date <= calc_date)
+      AND (a.end_date IS NULL OR a.end_date >= calc_date);
     
     total_hours := total_hours + daily_hours;
-    current_date := current_date + INTERVAL '1 day';
+    calc_date := calc_date + INTERVAL '1 day';
   END LOOP;
   
   RETURN total_hours;

@@ -1,0 +1,80 @@
+// =====================================================
+// CREAR USUARIOS REALES EN SUPABASE AUTH
+// Script para configuración de producción
+// =====================================================
+
+import { createClient } from '@supabase/supabase-js'
+
+// Configuración de Supabase
+const supabaseUrl = 'https://gkmjnhumsbiscpkbyihv.supabase.co'
+const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdrbWpuaHVtc2Jpc2Nwa2J5aWh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU2MTQwOTIsImV4cCI6MjA3MTE5MDA5Mn0._UYrbiBNQsBQQSIajJaqOnQJMRL2rfEMcqTZDxYvrOc'
+
+// Crear cliente de Supabase con service key
+const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
+async function createRealUsers() {
+  console.log('🚀 Creando usuarios reales en Supabase Auth...')
+
+  try {
+    // 1. Crear usuario administrador
+    console.log('📝 Creando usuario administrador...')
+    const { data: adminUser, error: adminError } = await supabase.auth.admin.createUser({
+      email: 'admin@sadmini.com',
+      password: 'admin123',
+      email_confirm: true,
+      user_metadata: {
+        full_name: 'Administrador del Sistema',
+        role: 'admin'
+      }
+    })
+
+    if (adminError) {
+      console.error('❌ Error creando administrador:', adminError.message)
+    } else {
+      console.log('✅ Administrador creado:', adminUser.user.email)
+    }
+
+    // 2. Crear usuario trabajadora
+    console.log('📝 Creando usuario trabajadora...')
+    const { data: workerUser, error: workerError } = await supabase.auth.admin.createUser({
+      email: 'trabajadora@sadmini.com',
+      password: 'worker123',
+      email_confirm: true,
+      user_metadata: {
+        full_name: 'María García López',
+        role: 'worker'
+      }
+    })
+
+    if (workerError) {
+      console.error('❌ Error creando trabajadora:', workerError.message)
+    } else {
+      console.log('✅ Trabajadora creada:', workerUser.user.email)
+    }
+
+    // 3. Verificar usuarios creados
+    console.log('🔍 Verificando usuarios creados...')
+    const { data: users, error: listError } = await supabase.auth.admin.listUsers()
+    
+    if (listError) {
+      console.error('❌ Error listando usuarios:', listError.message)
+    } else {
+      console.log('📊 Usuarios en el sistema:')
+      users.users.forEach(user => {
+        console.log(`  - ${user.email} (${user.user_metadata?.role || 'sin rol'})`)
+      })
+    }
+
+    console.log('🎉 Proceso completado!')
+    console.log('📋 Próximos pasos:')
+    console.log('  1. Ejecuta setup_production_auth.sql en Supabase')
+    console.log('  2. Actualiza AuthContext.tsx para usar autenticación real')
+    console.log('  3. Prueba el login con las credenciales reales')
+
+  } catch (error) {
+    console.error('💥 Error general:', error.message)
+  }
+}
+
+// Ejecutar la función
+createRealUsers()
