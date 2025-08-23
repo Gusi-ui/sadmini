@@ -21,12 +21,12 @@ El error "User not allowed" indica que estamos usando la **anon key** en lugar d
 
 #### ❌ Anon Key (Lo que tienes ahora):
 ```
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdrbWpuaHVtc2Jpc2Nwa2J5aWh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU2MTQwOTIsImV4cCI6MjA3MTE5MDA5Mn0._UYrbiBNQsBQQSIajJaqOnQJMRL2rfEMcqTZDxYvrOc
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlvdXItcHJvamVjdC1yZWYiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTYxNjI4OTAyMCwiZXhwIjoxOTMxODY1MDIwfQ.example_anon_key_signature
 ```
 
 #### ✅ Service Role Key (Lo que necesitas):
 ```
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdrbWpuaHVtc2Jpc2Nwa2J5aWh2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTYxNDA5MiwiZXhwIjoyMDcxMTkwMDkyfQ.XXXXX
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlvdXItcHJvamVjdC1yZWYiLCJyb2xlIjoic2VydmljZV9yb2xlIiwiaWF0IjoxNjE2Mjg5MDIwLCJleHAiOjE5MzE4NjUwMjB9.example_service_role_key_signature
 ```
 
 ### 4. Actualizar Script

@@ -4,7 +4,7 @@
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = 'https://gkmjnhumsbiscpkbyihv.supabase.co'
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdrbWpuaHVtc2Jpc2Nwa2J5aWh2Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NTYxNDA5MiwiZXhwIjoyMDcxMTkwMDkyfQ._kRrKuZUSrkXY3NIenH4UZZe3l2MVmhqFa8apVTjra8'
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'your-service-role-key-here'
 
 const supabase = createClient(supabaseUrl, supabaseKey)
 
