@@ -14,19 +14,19 @@ El error "User not allowed" indica que estamos usando la **anon key** en lugar d
 1. Ve a **Settings** → **API**
 2. Busca la sección **Project API keys**
 3. Copia la **service_role** key (NO la anon key)
-4. La service_role key empieza con `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`
+4. La service_role key empieza con `<SERVICE_ROLE_KEY_PREFIX>...`
 5. Y contiene `"role":"service_role"` en el payload
 
 ### 3. Diferencias entre Keys
 
 #### ❌ Anon Key (Lo que tienes ahora):
 ```
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlvdXItcHJvamVjdC1yZWYiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTYxNjI4OTAyMCwiZXhwIjoxOTMxODY1MDIwfQ.example_anon_key_signature
+<ANON_KEY_PLACEHOLDER>
 ```
 
 #### ✅ Service Role Key (Lo que necesitas):
 ```
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlvdXItcHJvamVjdC1yZWYiLCJyb2xlIjoic2VydmljZV9yb2xlIiwiaWF0IjoxNjE2Mjg5MDIwLCJleHAiOjE5MzE4NjUwMjB9.example_service_role_key_signature
+<SERVICE_ROLE_KEY_PLACEHOLDER>
 ```
 
 ### 4. Actualizar Script

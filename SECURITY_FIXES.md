@@ -24,7 +24,7 @@ Replaced hardcoded Supabase keys with environment variable references in:
 
 **Before:**
 ```javascript
-const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+const supabaseServiceKey = '<HARDCODED_KEY_PLACEHOLDER>'
 ```
 
 **After:**
