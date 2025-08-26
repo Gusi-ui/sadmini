@@ -14,7 +14,7 @@ INSERT INTO profiles (id, email, full_name, role, phone, address) VALUES
     'Administrador Mataró',
     'admin',
     '+34937580200',
-    'Plaça de l\'Ajuntament 1, 08301 Mataró'
+    'Plaça de l''Ajuntament 1, 08301 Mataró'
   ),
   (
     (SELECT id FROM auth.users WHERE email = 'trabajadora@mataro.cat' LIMIT 1),
