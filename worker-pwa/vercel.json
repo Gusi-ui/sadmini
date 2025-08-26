@@ -16,16 +16,9 @@
     }
   ],
   "env": {
-    "VITE_SUPABASE_URL": "@vite_supabase_url",
-    "VITE_SUPABASE_ANON_KEY": "@vite_supabase_anon_key",
     "VITE_APP_NAME": "Worker PWA - Cuidado Domiciliario",
     "VITE_APP_VERSION": "1.0.0",
     "VITE_ENABLE_NOTIFICATIONS": "true",
     "VITE_ADMIN_URL": "https://admin.cuidado-domestico.com"
-  },
-  "functions": {
-    "dist/**/*.js": {
-      "maxDuration": 30
-    }
   }
 }
