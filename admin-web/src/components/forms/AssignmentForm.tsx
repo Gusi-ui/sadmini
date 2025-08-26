@@ -80,8 +80,8 @@ export default function AssignmentForm({ assignment, timeSlots, onSubmit, onCanc
       end_date: assignment.end_date || '',
       notes: assignment.notes || ''
     } : {
-      worker_id: '',
-      user_id: '',
+      worker_id: undefined,
+      user_id: undefined,
       start_date: new Date().toISOString().split('T')[0],
       end_date: '',
       notes: ''
@@ -129,7 +129,7 @@ export default function AssignmentForm({ assignment, timeSlots, onSubmit, onCanc
   
   const addTimeSlot = () => {
     setTimeSlotsData(prev => [...prev, {
-      assignment_id: '',
+      assignment_id: undefined,
       day_of_week: 1,
       day_type: 'laborable',
       start_time: '09:00',
@@ -193,7 +193,7 @@ export default function AssignmentForm({ assignment, timeSlots, onSubmit, onCanc
                     name="worker_id"
                     control={control}
                     render={({ field }) => (
-                      <Select value={field.value} onValueChange={field.onChange}>
+                      <Select value={field.value || ''} onValueChange={field.onChange}>
                         <SelectTrigger className={errors.worker_id ? 'border-red-500' : ''}>
                           <SelectValue placeholder="Seleccionar trabajadora" />
                         </SelectTrigger>
@@ -221,7 +221,7 @@ export default function AssignmentForm({ assignment, timeSlots, onSubmit, onCanc
                     name="user_id"
                     control={control}
                     render={({ field }) => (
-                      <Select value={field.value} onValueChange={field.onChange}>
+                      <Select value={field.value || ''} onValueChange={field.onChange}>
                         <SelectTrigger className={errors.user_id ? 'border-red-500' : ''}>
                           <SelectValue placeholder="Seleccionar cliente" />
                         </SelectTrigger>

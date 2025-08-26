@@ -3,10 +3,14 @@
 // =====================================================
 
 import { createClient } from '@supabase/supabase-js'
+import dotenv from 'dotenv'
+
+// Cargar variables de entorno desde .env.local
+dotenv.config({ path: '.env.local' })
 
 // Configuración de Supabase
 const supabaseUrl = 'https://gkmjnhumsbiscpkbyihv.supabase.co'
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'your-service-role-key-here'
+const supabaseServiceKey = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY || 'your-service-role-key-here'
 
 // Crear cliente de Supabase con service key
 const supabase = createClient(supabaseUrl, supabaseServiceKey)

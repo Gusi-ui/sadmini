@@ -111,12 +111,12 @@ export default function PlanningPage() {
             <label className="text-sm font-medium text-gray-700 mb-2 block">
               Trabajadora
             </label>
-            <Select value={selectedWorker || ''} onValueChange={(value) => setSelectedWorker(value || null)}>
+            <Select value={selectedWorker || 'all'} onValueChange={(value) => setSelectedWorker(value === 'all' ? null : value)}>
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="Todas las trabajadoras" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todas las trabajadoras</SelectItem>
+                <SelectItem value="all">Todas las trabajadoras</SelectItem>
                 {workers?.filter(w => w.is_active).map(worker => (
                   <SelectItem key={worker.id} value={worker.id}>
                     {worker.full_name}

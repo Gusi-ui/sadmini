@@ -27,6 +27,8 @@ export default function WorkerForm({ worker, onSubmit, onCancel, isLoading = fal
     reset
   } = useForm<WorkerFormData>({
     resolver: zodResolver(workerSchema),
+    mode: 'onSubmit',
+    reValidateMode: 'onSubmit',
     defaultValues: worker ? {
       employee_id: worker.employee_id,
       dni: worker.dni,

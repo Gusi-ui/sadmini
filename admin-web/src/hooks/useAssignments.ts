@@ -98,7 +98,7 @@ export function useCreateAssignment() {
         worker_id: assignment.worker_id,
         user_id: assignment.user_id,
         start_date: assignment.start_date,
-        end_date: assignment.end_date,
+        end_date: assignment.end_date || null,
         notes: assignment.notes,
         is_active: true
       }
@@ -165,6 +165,7 @@ export function useUpdateAssignment() {
       // Actualizar la asignación
       const updateData: AssignmentUpdate = {
         ...assignment,
+        end_date: assignment.end_date || null,
         updated_at: new Date().toISOString()
       }
       
@@ -293,7 +294,7 @@ export async function checkScheduleConflicts(
   newTimeSlots: TimeSlotFormData[],
   excludeAssignmentId?: string
 ) {
-  const { data: existingAssignments, error } = await supabase
+  let query = supabase
     .from('assignments')
     .select(`
       id,
@@ -303,7 +304,13 @@ export async function checkScheduleConflicts(
     `)
     .eq('worker_id', workerId)
     .eq('is_active', true)
-    .neq('id', excludeAssignmentId || '')
+  
+  // Solo agregar el filtro de exclusión si se proporciona un ID válido
+  if (excludeAssignmentId) {
+    query = query.neq('id', excludeAssignmentId)
+  }
+  
+  const { data: existingAssignments, error } = await query
   
   if (error) {
     throw new Error(`Error al verificar conflictos: ${error.message}`)

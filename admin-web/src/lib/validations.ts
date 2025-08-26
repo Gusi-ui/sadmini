@@ -116,10 +116,18 @@ export type UserFormData = z.infer<typeof userSchema>
 // Validaciones para asignaciones
 export const assignmentSchema = z.object({
   worker_id: z.string()
-    .min(1, 'Debe seleccionar una trabajadora'),
+    .min(1, 'Debe seleccionar una trabajadora')
+    .optional()
+    .refine((val) => val !== undefined && val !== '', {
+      message: 'Debe seleccionar una trabajadora'
+    }),
   
   user_id: z.string()
-    .min(1, 'Debe seleccionar un usuario'),
+    .min(1, 'Debe seleccionar un usuario')
+    .optional()
+    .refine((val) => val !== undefined && val !== '', {
+      message: 'Debe seleccionar un usuario'
+    }),
   
   start_date: z.string()
     .min(1, 'La fecha de inicio es obligatoria')
@@ -131,10 +139,12 @@ export const assignmentSchema = z.object({
     }, 'La fecha de inicio no puede ser anterior a hoy'),
   
   end_date: z.string()
+    .transform((val) => val === '' ? undefined : val)
     .refine((date) => {
       if (!date) return true
-      return true
-    }, 'La fecha de fin debe ser posterior a la fecha de inicio')
+      const endDate = new Date(date)
+      return !isNaN(endDate.getTime())
+    }, 'La fecha de fin no es válida')
     .optional(),
   
   notes: z.string()
@@ -142,12 +152,15 @@ export const assignmentSchema = z.object({
     .optional()
 })
 
-export type AssignmentFormData = z.infer<typeof assignmentSchema>
+export type AssignmentFormData = z.infer<typeof assignmentSchema> & {
+  worker_id?: string
+  user_id?: string
+}
 
 // Validaciones para tramos horarios
 export const timeSlotSchema = z.object({
   assignment_id: z.string()
-    .min(1, 'ID de asignación requerido'),
+    .optional(),
   
   day_of_week: z.number()
     .min(1, 'Día de la semana inválido')
@@ -169,7 +182,9 @@ export const timeSlotSchema = z.object({
     }, 'La hora de fin debe ser posterior a la hora de inicio')
 })
 
-export type TimeSlotFormData = z.infer<typeof timeSlotSchema>
+export type TimeSlotFormData = z.infer<typeof timeSlotSchema> & {
+  assignment_id?: string
+}
 
 // Validaciones para festivos
 export const holidaySchema = z.object({

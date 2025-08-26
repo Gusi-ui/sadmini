@@ -23,8 +23,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
 
-  const loadProfile = useCallback(async (userId: string) => {
+  const loadProfile = useCallback(async (userId: string, currentUser?: User) => {
+    console.log('📋 Iniciando carga de perfil para usuario:', userId)
     try {
+      // Si estamos en modo mock, crear perfil simulado
+      if (userId.startsWith('mock-')) {
+        console.log('🎭 Modo mock detectado, creando perfil simulado')
+        const mockProfile: Profile = {
+          id: userId,
+          email: userId === 'mock-admin-id' ? 'admin@sadmini.com' : 'trabajadora@sadmini.com',
+          full_name: userId === 'mock-admin-id' ? 'Administrador del Sistema' : 'María García López',
+          role: userId === 'mock-admin-id' ? 'admin' : 'worker',
+          phone: '+34600000000',
+          address: 'Dirección de prueba',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+        setProfile(mockProfile)
+        console.log('✅ Perfil mock creado:', mockProfile)
+        return
+      }
+
+      console.log('🔍 Consultando perfil en Supabase...')
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -32,7 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .maybeSingle()
 
       if (error) {
-        console.error('Error loading profile:', error)
+        console.error('❌ Error loading profile:', error)
         if (error.code !== 'PGRST116') {
           toast.error('Error al cargar el perfil de usuario')
         }
@@ -40,43 +60,93 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return
       }
 
+      console.log('📋 Perfil obtenido de Supabase:', data)
       setProfile(data)
     } catch (error) {
-      console.error('Error loading profile (catch):', error)
+      console.error('❌ Error loading profile (catch):', error)
       
+      console.log('🔧 Creando perfil temporal...')
       // Crear un perfil temporal basado en el usuario
       const tempProfile = {
         id: userId,
-        email: user?.email || '',
-        full_name: user?.user_metadata?.full_name || 'Usuario',
-        role: user?.user_metadata?.role || 'admin',
+        email: currentUser?.email || '',
+        full_name: currentUser?.user_metadata?.full_name || 'Usuario',
+        role: currentUser?.user_metadata?.role || 'admin',
         phone: null,
         address: null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }
       setProfile(tempProfile)
+      console.log('🔧 Perfil temporal creado:', tempProfile)
     }
-  }, [user])
+  }, [])
 
   // Load user on mount
   useEffect(() => {
+    let isMounted = true
+    
     async function loadUser() {
+      console.log('🔄 Iniciando carga de usuario...')
+      
+      // Timeout de seguridad más corto
+      const timeoutId = setTimeout(() => {
+        console.warn('⏰ Timeout: Forzando fin de loading después de 5 segundos')
+        if (isMounted) {
+          setUser(null)
+          setProfile(null)
+          setLoading(false)
+        }
+      }, 5000)
+      
       try {
-        const { data: { user } } = await supabase.auth.getUser()
-        setUser(user)
+        console.log('📡 Verificando variables de entorno...')
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+        const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
         
-        if (user) {
-          await loadProfile(user.id)
+        if (!supabaseUrl || !supabaseKey) {
+          throw new Error('Variables de entorno de Supabase no configuradas')
+        }
+        
+        console.log('📡 Obteniendo usuario de Supabase...')
+        const { data: { user }, error } = await supabase.auth.getUser()
+        
+        if (!isMounted) return
+        
+        if (error) {
+          console.error('❌ Error al obtener usuario:', error)
+          setUser(null)
+          setProfile(null)
+        } else {
+          console.log('👤 Usuario obtenido:', user ? `${user.email} (${user.id})` : 'No hay usuario')
+          setUser(user)
+          
+          if (user) {
+            console.log('📋 Cargando perfil del usuario...')
+            await loadProfile(user.id, user)
+            console.log('✅ Perfil cargado correctamente')
+          }
         }
       } catch (error) {
-        console.error('Error loading user:', error)
+        console.error('❌ Error loading user:', error)
+        if (isMounted) {
+          setUser(null)
+          setProfile(null)
+        }
       } finally {
-        setLoading(false)
+        clearTimeout(timeoutId)
+        if (isMounted) {
+          console.log('🏁 Finalizando carga de usuario, estableciendo loading = false')
+          setLoading(false)
+        }
       }
     }
     
     loadUser()
+    
+    return () => {
+      isMounted = false
+    }
 
     // Set up auth listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -84,7 +154,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user || null)
         
         if (session?.user) {
-          await loadProfile(session.user.id)
+          await loadProfile(session.user.id, session.user)
         } else {
           setProfile(null)
         }
@@ -107,7 +177,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (data.user) {
         setUser(data.user)
-        await loadProfile(data.user.id)
+        await loadProfile(data.user.id, data.user)
         toast.success('Sesión iniciada correctamente')
       }
     } catch (error: any) {
@@ -178,7 +248,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function refreshProfile() {
     if (user) {
-      await loadProfile(user.id)
+      await loadProfile(user.id, user)
     }
   }
 
@@ -199,10 +269,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   )
 }
 
-export function useAuth() {
+function useAuth() {
   const context = useContext(AuthContext)
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider')
   }
   return context
 }
+
+// eslint-disable-next-line react-refresh/only-export-components
+export { useAuth }

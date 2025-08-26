@@ -68,8 +68,8 @@ export default function ReportsPage() {
   const currentDate = new Date()
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear())
   const [selectedMonth, setSelectedMonth] = useState(currentDate.getMonth() + 1)
-  const [selectedUserId, setSelectedUserId] = useState<string>('')
-  const [selectedWorkerId, setSelectedWorkerId] = useState<string>('')
+  const [selectedUserId, setSelectedUserId] = useState<string>('all')
+  const [selectedWorkerId, setSelectedWorkerId] = useState<string>('all')
   const [viewingReport, setViewingReport] = useState<MonthlyReportData | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
 
@@ -78,8 +78,8 @@ export default function ReportsPage() {
   const { data: reports, isLoading: reportsLoading, refetch } = useMonthlyReports({
     year: selectedYear,
     month: selectedMonth,
-    user_id: selectedUserId || undefined,
-    worker_id: selectedWorkerId || undefined
+    user_id: selectedUserId === 'all' ? undefined : selectedUserId,
+    worker_id: selectedWorkerId === 'all' ? undefined : selectedWorkerId
   })
   
   const generateReportMutation = useGenerateMonthlyReport()
@@ -89,8 +89,8 @@ export default function ReportsPage() {
     await generateReportMutation.mutateAsync({
       year: selectedYear,
       month: selectedMonth,
-      user_id: selectedUserId || undefined,
-      worker_id: selectedWorkerId || undefined
+      user_id: selectedUserId === 'all' ? undefined : selectedUserId,
+      worker_id: selectedWorkerId === 'all' ? undefined : selectedWorkerId
     })
     refetch()
   }
@@ -259,12 +259,12 @@ export default function ReportsPage() {
               <label className="text-sm font-medium text-gray-700 mb-2 block">
                 Cliente (Opcional)
               </label>
-              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+              <Select value={selectedUserId} onValueChange={(value) => setSelectedUserId(value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todos los clientes" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos los clientes</SelectItem>
+                  <SelectItem value="all">Todos los clientes</SelectItem>
                   {users?.filter(u => u.is_active).map(user => (
                     <SelectItem key={user.id} value={user.id}>
                       {user.full_name}
@@ -278,12 +278,12 @@ export default function ReportsPage() {
               <label className="text-sm font-medium text-gray-700 mb-2 block">
                 Trabajadora (Opcional)
               </label>
-              <Select value={selectedWorkerId} onValueChange={setSelectedWorkerId}>
+              <Select value={selectedWorkerId} onValueChange={(value) => setSelectedWorkerId(value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todas las trabajadoras" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas las trabajadoras</SelectItem>
+                  <SelectItem value="all">Todas las trabajadoras</SelectItem>
                   {workers?.filter(w => w.is_active).map(worker => (
                     <SelectItem key={worker.id} value={worker.id}>
                       {worker.full_name}
