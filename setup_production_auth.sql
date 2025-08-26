@@ -9,20 +9,20 @@
 -- 2. Crear perfiles para los usuarios que ya existen
 INSERT INTO profiles (id, email, full_name, role, phone, address) VALUES
   (
-    (SELECT id FROM auth.users WHERE email = 'admin@sadmini.com' LIMIT 1),
-    'admin@sadmini.com',
-    'Administrador del Sistema',
+    (SELECT id FROM auth.users WHERE email = 'admin@mataro.cat' LIMIT 1),
+    'admin@mataro.cat',
+    'Administrador Mataró',
     'admin',
-    '+34600000001',
-    'Calle Principal 123, Mataró'
+    '+34937580200',
+    'Plaça de l\'Ajuntament 1, 08301 Mataró'
   ),
   (
-    (SELECT id FROM auth.users WHERE email = 'trabajadora@sadmini.com' LIMIT 1),
-    'trabajadora@sadmini.com',
+    (SELECT id FROM auth.users WHERE email = 'trabajadora@mataro.cat' LIMIT 1),
+    'trabajadora@mataro.cat',
     'María García López',
     'worker',
     '+34600000002',
-    'Calle Secundaria 456, Mataró'
+    'Carrer de la Riera 123, 08301 Mataró'
   )
 ON CONFLICT (id) DO UPDATE SET
   email = EXCLUDED.email,

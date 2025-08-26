@@ -43,5 +43,8 @@
   "bugs": {
     "url": "https://github.com/Gusi-ui/sadmini/issues"
   },
-  "homepage": "https://github.com/Gusi-ui/sadmini#readme"
+  "homepage": "https://github.com/Gusi-ui/sadmini#readme",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.56.0"
+  }
 }

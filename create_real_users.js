@@ -5,9 +5,17 @@
 
 import { createClient } from '@supabase/supabase-js'
 
-// Configuración de Supabase
-const supabaseUrl = 'https://gkmjnhumsbiscpkbyihv.supabase.co'
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'your-service-role-key-here'
+// Configuración de Supabase desde variables de entorno
+const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error('❌ Error: Variables de entorno faltantes')
+  console.error('Asegúrate de configurar:')
+  console.error('- SUPABASE_URL o VITE_SUPABASE_URL')
+  console.error('- SUPABASE_SERVICE_ROLE_KEY')
+  process.exit(1)
+}
 
 // Crear cliente de Supabase con service key
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
@@ -19,11 +27,11 @@ async function createRealUsers() {
     // 1. Crear usuario administrador
     console.log('📝 Creando usuario administrador...')
     const { data: adminUser, error: adminError } = await supabase.auth.admin.createUser({
-      email: 'admin@sadmini.com',
-      password: 'admin123',
+      email: 'admin@mataro.cat',
+      password: 'AdminMataro2024!',
       email_confirm: true,
       user_metadata: {
-        full_name: 'Administrador del Sistema',
+        full_name: 'Administrador Mataró',
         role: 'admin'
       }
     })
@@ -34,11 +42,11 @@ async function createRealUsers() {
       console.log('✅ Administrador creado:', adminUser.user.email)
     }
 
-    // 2. Crear usuario trabajadora
-    console.log('📝 Creando usuario trabajadora...')
+    // 2. Crear usuario trabajadora de ejemplo
+    console.log('📝 Creando usuario trabajadora de ejemplo...')
     const { data: workerUser, error: workerError } = await supabase.auth.admin.createUser({
-      email: 'trabajadora@sadmini.com',
-      password: 'worker123',
+      email: 'trabajadora@mataro.cat',
+      password: 'TrabajadoraMataro2024!',
       email_confirm: true,
       user_metadata: {
         full_name: 'María García López',
