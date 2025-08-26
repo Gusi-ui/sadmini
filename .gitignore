@@ -109,3 +109,6 @@ Thumbs.db
 
 # Local development
 *.log
+
+# Configuración de producción sensible
+CONFIGURACION_PRODUCCION.md
