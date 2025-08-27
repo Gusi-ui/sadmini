@@ -114,7 +114,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!isMounted) return
         
         if (error) {
-          console.error('❌ Error al obtener usuario:', error)
+          // Solo mostrar error si no es el esperado "Auth session missing"
+          if (error.message !== 'Auth session missing!') {
+            console.error('❌ Error al obtener usuario:', error)
+          } else {
+            console.log('ℹ️ No hay sesión activa (normal al iniciar)')
+          }
           setUser(null)
           setProfile(null)
         } else {
