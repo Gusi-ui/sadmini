@@ -85,6 +85,8 @@ export function useCreateUser() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
+      queryClient.invalidateQueries({ queryKey: ['user-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['active-users'] })
       toast.success('Usuario creado correctamente')
     },
     onError: (error: Error) => {
@@ -127,6 +129,8 @@ export function useUpdateUser() {
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
       queryClient.invalidateQueries({ queryKey: ['user', result.id] })
+      queryClient.invalidateQueries({ queryKey: ['user-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['active-users'] })
       toast.success('Usuario actualizado correctamente')
     },
     onError: (error: Error) => {
@@ -157,6 +161,8 @@ export function useToggleUserStatus() {
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
       queryClient.invalidateQueries({ queryKey: ['user', result.id] })
+      queryClient.invalidateQueries({ queryKey: ['user-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['active-users'] })
       toast.success(`Usuario ${result.is_active ? 'activado' : 'desactivado'} correctamente`)
     },
     onError: (error: Error) => {
@@ -202,6 +208,8 @@ export function useDeleteUser() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] })
+      queryClient.invalidateQueries({ queryKey: ['user-stats'] })
+      queryClient.invalidateQueries({ queryKey: ['active-users'] })
       toast.success('Usuario eliminado correctamente')
     },
     onError: (error: Error) => {

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase, type Database } from '@/lib/supabase'
 import { format, isToday, isTomorrow, addDays, differenceInHours } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -18,6 +18,8 @@ export interface Alert {
   suggestion?: string
   data?: any
   created_at: string
+  navigationPath?: string
+  navigationParams?: Record<string, string>
 }
 
 interface AssignmentWithDetails extends Assignment {
@@ -59,29 +61,22 @@ export function useAlerts() {
       const users = usersResult.data
       const holidays = holidaysResult.data
       
-      // 1. Detectar conflictos de horarios
+      // Solo alertas críticas para producción
+      // 1. Detectar conflictos de horarios (CRÍTICO)
       const scheduleConflicts = detectScheduleConflicts(assignments)
       alerts.push(...scheduleConflicts)
       
-      // 2. Detectar trabajadoras sin asignaciones
-      const workersWithoutAssignments = detectWorkersWithoutAssignments(workers, assignments)
-      alerts.push(...workersWithoutAssignments)
-      
-      // 3. Detectar clientes sin trabajadora asignada
+      // 2. Detectar usuarios sin trabajadora asignada (CRÍTICO)
       const usersWithoutWorkers = detectUsersWithoutWorkers(users, assignments)
       alerts.push(...usersWithoutWorkers)
       
-      // 4. Recordatorios de festivos
-      const holidayReminders = detectHolidayReminders(holidays)
-      alerts.push(...holidayReminders)
+      // 3. Recordatorios de festivos importantes (SOLO MAÑANA)
+      const criticalHolidayReminders = detectCriticalHolidayReminders(holidays)
+      alerts.push(...criticalHolidayReminders)
       
-      // 5. Alertas de sobrecarga de trabajo
-      const workloadAlerts = detectWorkloadAlerts(assignments)
-      alerts.push(...workloadAlerts)
-      
-      // 6. Asignaciones que terminan pronto
-      const endingAssignments = detectEndingAssignments(assignments)
-      alerts.push(...endingAssignments)
+      // 4. Asignaciones que terminan esta semana (CRÍTICO)
+      const criticalEndingAssignments = detectCriticalEndingAssignments(assignments)
+      alerts.push(...criticalEndingAssignments)
       
       // Ordenar por prioridad
       return alerts.sort((a, b) => {
@@ -92,7 +87,9 @@ export function useAlerts() {
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       })
     },
-    refetchInterval: 5 * 60 * 1000 // Actualizar cada 5 minutos
+    refetchInterval: 30 * 1000, // Actualizar cada 30 segundos
+    refetchOnWindowFocus: true, // Actualizar cuando la ventana recibe foco
+    staleTime: 0 // Considerar datos obsoletos inmediatamente
   })
 }
 
@@ -108,6 +105,26 @@ export function useAlertCounts() {
   const total = alerts.length
   
   return { critical, warning, info, total }
+}
+
+// Hook para refrescar alertas manualmente
+export function useRefreshAlerts() {
+  const queryClient = useQueryClient()
+  
+  const refreshAlerts = () => {
+    // Invalidar todas las queries relacionadas con alertas
+    queryClient.invalidateQueries({ queryKey: ['alerts'] })
+    queryClient.invalidateQueries({ queryKey: ['assignments'] })
+    queryClient.invalidateQueries({ queryKey: ['workers'] })
+    queryClient.invalidateQueries({ queryKey: ['users'] })
+    queryClient.invalidateQueries({ queryKey: ['holidays'] })
+    // Invalidar estadísticas
+    queryClient.invalidateQueries({ queryKey: ['user-stats'] })
+    queryClient.invalidateQueries({ queryKey: ['worker-stats'] })
+    queryClient.invalidateQueries({ queryKey: ['assignment-stats'] })
+  }
+  
+  return { refreshAlerts }
 }
 
 // Funciones de deteccion de alertas
@@ -159,6 +176,8 @@ function detectScheduleConflicts(assignments: AssignmentWithDetails[]): Alert[] 
               title: `Conflicto de horarios - ${assignment1.worker.full_name}`,
               description: `Solapamiento entre ${assignment1.user.full_name} y ${assignment2.user.full_name}`,
               suggestion: 'Revisa y ajusta los horarios para evitar el conflicto.',
+              navigationPath: '/asignaciones',
+              navigationParams: { workerId: assignment1.worker_id },
               data: {
                 workerId: assignment1.worker_id,
                 workerName: assignment1.worker.full_name,
@@ -170,6 +189,71 @@ function detectScheduleConflicts(assignments: AssignmentWithDetails[]): Alert[] 
             })
           }
         }
+      }
+    }
+  })
+  
+  return alerts
+}
+
+// Versión crítica de recordatorios de festivos (solo mañana)
+function detectCriticalHolidayReminders(holidays: Holiday[]): Alert[] {
+  const alerts: Alert[] = []
+  const now = new Date()
+  const tomorrow = format(addDays(now, 1), 'yyyy-MM-dd')
+  
+  holidays.forEach(holiday => {
+    if (holiday.date === tomorrow) {
+      alerts.push({
+        id: `holiday-critical-${holiday.id}`,
+        type: 'warning',
+        category: 'reminder',
+        title: `Festivo mañana - ${holiday.name}`,
+        description: `Mañana es ${holiday.name}. Verifica horarios especiales.`,
+        suggestion: 'Confirma que las trabajadoras están informadas del festivo.',
+        navigationPath: '/festivos',
+        data: {
+          holidayId: holiday.id,
+          holidayName: holiday.name,
+          date: holiday.date,
+          type: holiday.type
+        },
+        created_at: now.toISOString()
+      })
+    }
+  })
+  
+  return alerts
+}
+
+// Versión crítica de asignaciones que terminan (solo esta semana)
+function detectCriticalEndingAssignments(assignments: AssignmentWithDetails[]): Alert[] {
+  const alerts: Alert[] = []
+  const now = new Date()
+  const nextWeek = addDays(now, 7)
+  
+  assignments.forEach(assignment => {
+    if (assignment.end_date) {
+      const endDate = new Date(assignment.end_date)
+      
+      if (endDate <= nextWeek && endDate >= now) {
+        alerts.push({
+          id: `ending-critical-${assignment.id}`,
+          type: 'critical',
+          category: 'reminder',
+          title: `Asignación termina esta semana - ${assignment.user.full_name}`,
+          description: `La asignación con ${assignment.worker.full_name} termina el ${format(endDate, 'dd/MM/yyyy')}.`,
+          suggestion: 'URGENTE: Contacta inmediatamente para confirmar renovación.',
+          navigationPath: '/asignaciones',
+          navigationParams: { assignmentId: assignment.id },
+          data: {
+            assignmentId: assignment.id,
+            workerName: assignment.worker.full_name,
+            userName: assignment.user.full_name,
+            endDate: assignment.end_date
+          },
+          created_at: now.toISOString()
+        })
       }
     }
   })
@@ -219,7 +303,7 @@ function detectWorkersWithoutAssignments(workers: Worker[], assignments: Assignm
         category: 'missing',
         title: `Trabajadora sin asignaciones - ${worker.full_name}`,
         description: `${worker.full_name} no tiene asignaciones activas.`,
-        suggestion: 'Considera asignar esta trabajadora a un cliente.',
+        suggestion: 'Considera asignar esta trabajadora a un usuario.',
         data: {
           workerId: worker.id,
           workerName: worker.full_name,
@@ -246,9 +330,11 @@ function detectUsersWithoutWorkers(users: User[], assignments: AssignmentWithDet
         id: `unassigned-user-${user.id}`,
         type: 'critical',
         category: 'missing',
-        title: `Cliente sin trabajadora - ${user.full_name}`,
+        title: `Usuario sin trabajadora - ${user.full_name}`,
         description: `${user.full_name} no tiene una trabajadora asignada.`,
-        suggestion: 'Asigna una trabajadora disponible a este cliente.',
+        suggestion: 'Asigna una trabajadora disponible a este usuario.',
+        navigationPath: '/asignaciones',
+        navigationParams: { userId: user.id },
         data: {
           userId: user.id,
           userName: user.full_name,
@@ -379,7 +465,7 @@ function detectEndingAssignments(assignments: AssignmentWithDetails[]): Alert[] 
           category: 'reminder',
           title: `Asignacion termina pronto - ${assignment.user.full_name}`,
           description: `La asignacion termina el ${format(endDate, 'dd/MM/yyyy')}.`,
-          suggestion: 'Contacta con el cliente para confirmar renovacion.',
+          suggestion: 'Contacta con el usuario para confirmar renovacion.',
           data: {
             assignmentId: assignment.id,
             workerName: assignment.worker.full_name,

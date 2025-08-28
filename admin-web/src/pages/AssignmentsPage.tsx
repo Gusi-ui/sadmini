@@ -175,7 +175,7 @@ export default function AssignmentsPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Asignaciones</h1>
           <p className="text-gray-600">
-            Gestiona las asignaciones de trabajadoras a clientes
+            Gestiona las asignaciones de trabajadoras a usuarios
           </p>
         </div>
         <Button onClick={openCreateForm}>
@@ -208,7 +208,7 @@ export default function AssignmentsPage() {
           <div className="relative flex-1 max-w-sm">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
             <Input
-              placeholder="Buscar por trabajadora, cliente, direccion..."
+              placeholder="Buscar por trabajadora, usuario, direccion..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -264,7 +264,7 @@ export default function AssignmentsPage() {
             <DialogDescription>
               {isEditing
                 ? 'Modifica los datos de la asignacion y sus horarios.'
-                : 'Crea una nueva asignacion configurando trabajadora, cliente y horarios.'
+                : 'Crea una nueva asignacion configurando trabajadora, usuario y horarios.'
               }
             </DialogDescription>
           </DialogHeader>
@@ -361,7 +361,7 @@ function AssignmentsTable({
           <TableHeader>
             <TableRow>
               <TableHead>Trabajadora</TableHead>
-              <TableHead>Cliente</TableHead>
+              <TableHead>Usuario</TableHead>
               <TableHead>Periodo</TableHead>
               <TableHead>Horarios</TableHead>
               <TableHead>Estado</TableHead>
@@ -520,7 +520,7 @@ function AssignmentDetails({ assignment }: { assignment: AssignmentWithDetails }
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <MapPin className="h-4 w-4" />
-              Cliente
+              Usuario
             </CardTitle>
           </CardHeader>
           <CardContent>

@@ -216,14 +216,14 @@ export default function AssignmentForm({ assignment, timeSlots, onSubmit, onCanc
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="user_id">Cliente *</Label>
+                  <Label htmlFor="user_id">Usuario *</Label>
                   <Controller
                     name="user_id"
                     control={control}
                     render={({ field }) => (
                       <Select value={field.value || ''} onValueChange={field.onChange}>
                         <SelectTrigger className={errors.user_id ? 'border-red-500' : ''}>
-                          <SelectValue placeholder="Seleccionar cliente" />
+                          <SelectValue placeholder="Seleccionar usuario" />
                         </SelectTrigger>
                         <SelectContent>
                           {users?.filter(u => u.is_active).map(user => (
@@ -448,7 +448,7 @@ export default function AssignmentForm({ assignment, timeSlots, onSubmit, onCanc
                     <div className="space-y-3">
                       <h4 className="font-medium flex items-center gap-2">
                         <MapPin className="h-4 w-4" />
-                        Cliente
+                        Usuario
                       </h4>
                       <div className="bg-green-50 p-3 rounded-lg">
                         <div className="font-medium">{selectedUser.full_name}</div>

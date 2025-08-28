@@ -1,4 +1,5 @@
 import React from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -18,11 +19,12 @@ import {
 import { useWorkers, useWorkerStats } from '@/hooks/useWorkers'
 import { useUsers, useUserStats } from '@/hooks/useUsers'
 import { useAssignments, useAssignmentStats } from '@/hooks/useAssignments'
-import { useAlerts, useAlertCounts } from '@/hooks/useAlerts'
+import { useAlerts, useAlertCounts, useRefreshAlerts } from '@/hooks/useAlerts'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
 export default function DashboardPage() {
+  const navigate = useNavigate()
   const { data: workers, isLoading: workersLoading } = useWorkers()
   const { data: users, isLoading: usersLoading } = useUsers()
   const { data: assignments, isLoading: assignmentsLoading } = useAssignments()
@@ -31,8 +33,22 @@ export default function DashboardPage() {
   const { data: assignmentStats } = useAssignmentStats()
   const { data: alerts, isLoading: alertsLoading } = useAlerts()
   const alertCounts = useAlertCounts()
+  const { refreshAlerts } = useRefreshAlerts()
 
   const isLoading = workersLoading || usersLoading || assignmentsLoading
+
+  // Función para manejar click en alertas
+  const handleAlertClick = (alert: any) => {
+    if (alert.navigationPath) {
+      // Construir la URL con parámetros de consulta si existen
+      let path = alert.navigationPath
+      if (alert.navigationParams) {
+        const params = new URLSearchParams(alert.navigationParams)
+        path += `?${params.toString()}`
+      }
+      navigate(path)
+    }
+  }
 
   // Obtener asignaciones del dia de hoy
   const today = format(new Date(), 'yyyy-MM-dd')
@@ -64,18 +80,6 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* Debug Info */}
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-        <h3 className="font-medium text-yellow-800 mb-2">🔧 Información de Depuración</h3>
-        <div className="text-sm text-yellow-700 space-y-1">
-          <p>Workers loading: {workersLoading ? 'Sí' : 'No'}</p>
-          <p>Users loading: {usersLoading ? 'Sí' : 'No'}</p>
-          <p>Assignments loading: {assignmentsLoading ? 'Sí' : 'No'}</p>
-          <p>Workers data: {workers ? `${workers.length} elementos` : 'null'}</p>
-          <p>Users data: {users ? `${users.length} elementos` : 'null'}</p>
-          <p>Assignments data: {assignments ? `${assignments.length} elementos` : 'null'}</p>
-        </div>
-      </div>
       
       {/* Header */}
       <div>
@@ -106,7 +110,7 @@ export default function DashboardPage() {
             <div className="flex items-center">
               <UserPlus className="h-8 w-8 text-green-500" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Clientes Activos</p>
+                <p className="text-sm font-medium text-gray-600">Usuarios Activos</p>
                 <p className="text-2xl font-bold text-gray-900">
                   {userStats?.active || 0}
                 </p>
@@ -153,11 +157,22 @@ export default function DashboardPage() {
                 <AlertTriangle className="h-5 w-5" />
                 Sistema de Alertas
               </div>
-              {alertCounts && alertCounts.total > 0 && (
-                <Badge variant="destructive">
-                  {alertCounts.total} alerta{alertCounts.total !== 1 ? 's' : ''}
-                </Badge>
-              )}
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={refreshAlerts}
+                  disabled={alertsLoading}
+                  className="h-8 w-8 p-0"
+                >
+                  {alertsLoading ? '🔄' : '↻'}
+                </Button>
+                {alertCounts && alertCounts.total > 0 && (
+                  <Badge variant="destructive">
+                    {alertCounts.total} alerta{alertCounts.total !== 1 ? 's' : ''}
+                  </Badge>
+                )}
+              </div>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -179,7 +194,9 @@ export default function DashboardPage() {
                     className={`
                       ${alert.type === 'warning' ? 'border-yellow-200 bg-yellow-50' : ''}
                       ${alert.type === 'info' ? 'border-blue-200 bg-blue-50' : ''}
+                      ${alert.navigationPath ? 'cursor-pointer hover:shadow-md transition-shadow' : ''}
                     `}
+                    onClick={() => handleAlertClick(alert)}
                   >
                     {alert.type === 'critical' && <AlertTriangle className="h-4 w-4" />}
                     {alert.type === 'warning' && <Clock className="h-4 w-4 text-yellow-600" />}
@@ -191,6 +208,11 @@ export default function DashboardPage() {
                         {alert.suggestion && (
                           <div className="text-xs text-gray-500 italic">
                             Sugerencia: {alert.suggestion}
+                          </div>
+                        )}
+                        {alert.navigationPath && (
+                          <div className="text-xs text-blue-600 font-medium mt-2">
+                            👆 Haz clic para ir a resolver
                           </div>
                         )}
                       </div>
@@ -246,10 +268,10 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Clientes */}
+            {/* Usuarios */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-600">Clientes</span>
+                <span className="text-sm font-medium text-gray-600">Usuarios</span>
                 <span className="text-sm text-gray-900">
                   {userStats?.active || 0} activos / {userStats?.total || 0} total
                 </span>

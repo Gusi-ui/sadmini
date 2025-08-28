@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -14,9 +14,25 @@ import {
   CalendarDays,
   Clock,
   Users,
-  CheckCircle
+  CheckCircle,
+  ChevronLeft,
+  ChevronRight,
+  MapPin
 } from 'lucide-react'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isWeekend } from 'date-fns'
+import { 
+  format, 
+  startOfMonth, 
+  endOfMonth, 
+  eachDayOfInterval, 
+  isWeekend, 
+  startOfWeek, 
+  endOfWeek, 
+  addDays, 
+  isSameMonth, 
+  isSameDay, 
+  addMonths, 
+  subMonths 
+} from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useAssignments } from '@/hooks/useAssignments'
 import { useWorkers } from '@/hooks/useWorkers'
@@ -25,7 +41,7 @@ import { useHolidays } from '@/hooks/useHolidays'
 
 export default function PlanningPage() {
   const [selectedMonth, setSelectedMonth] = useState(new Date())
-  const [selectedWorker, setSelectedWorker] = useState<string | null>(null)
+  const [selectedWorker, setSelectedWorker] = useState<string>('all')
   const [viewType, setViewType] = useState<'calendar' | 'list'>('calendar')
 
   const { data: assignments, isLoading: assignmentsLoading } = useAssignments()
@@ -39,6 +55,11 @@ export default function PlanningPage() {
   const monthStart = startOfMonth(selectedMonth)
   const monthEnd = endOfMonth(selectedMonth)
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd })
+  
+  // Generar calendario completo (incluyendo días de meses anteriores/siguientes)
+  const calendarStart = startOfWeek(monthStart, { weekStartsOn: 1 }) // Lunes como primer día
+  const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 1 })
+  const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd })
 
   // Función para obtener el tipo de día
   const getDayType = (date: Date) => {
@@ -49,11 +70,38 @@ export default function PlanningPage() {
     if (isWeekend(date)) return 'fin_semana'
     return 'laborable'
   }
+  
+  // Función para obtener asignaciones de un día específico
+  const getAssignmentsForDay = (date: Date) => {
+    return filteredAssignments?.filter(assignment => {
+      const startDate = new Date(assignment.start_date)
+      const endDate = assignment.end_date ? new Date(assignment.end_date) : null
+      
+      return startDate <= date && (!endDate || endDate >= date) && assignment.is_active
+    }) || []
+  }
+  
+  // Función para obtener el festivo de un día específico
+  const getHolidayForDay = (date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd')
+    return holidays?.find(h => h.date === dateStr && h.is_active)
+  }
 
-  // Filtrar asignaciones por trabajadora seleccionada
-  const filteredAssignments = selectedWorker
-    ? assignments?.filter(a => a.worker_id === selectedWorker)
-    : assignments
+  // Filtrar asignaciones por trabajador seleccionado
+  const filteredAssignments = useMemo(() => {
+    if (!assignments) return []
+    
+    return assignments.filter(assignment => {
+      const assignmentDate = new Date(assignment.start_date)
+      const isInMonth = assignmentDate.getMonth() === selectedMonth.getMonth() && 
+                       assignmentDate.getFullYear() === selectedMonth.getFullYear()
+      
+      if (!isInMonth) return false
+      
+      if (selectedWorker === 'all') return true
+      return assignment.worker_id === selectedWorker
+    })
+  }, [assignments, selectedMonth, selectedWorker])
 
   // Calcular estadísticas del mes
   const monthStats = {
@@ -95,23 +143,33 @@ export default function PlanningPage() {
       {/* Controles */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
-          <div>
-            <label className="text-sm font-medium text-gray-700 mb-2 block">
-              Mes y Año
-            </label>
-            <input
-              type="month"
-              value={format(selectedMonth, 'yyyy-MM')}
-              onChange={(e) => setSelectedMonth(new Date(e.target.value))}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedMonth(subMonths(selectedMonth, 1))}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div className="min-w-[200px] text-center">
+              <h2 className="text-lg font-semibold text-gray-900">
+                {format(selectedMonth, 'MMMM yyyy', { locale: es })}
+              </h2>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedMonth(addMonths(selectedMonth, 1))}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
           </div>
 
           <div>
             <label className="text-sm font-medium text-gray-700 mb-2 block">
               Trabajadora
             </label>
-            <Select value={selectedWorker || 'all'} onValueChange={(value) => setSelectedWorker(value === 'all' ? null : value)}>
+            <Select value={selectedWorker || 'all'} onValueChange={(value) => setSelectedWorker(value === 'all' ? 'all' : value)}>
               <SelectTrigger className="w-48">
                 <SelectValue placeholder="Todas las trabajadoras" />
               </SelectTrigger>
@@ -225,11 +283,129 @@ export default function PlanningPage() {
         </CardHeader>
         <CardContent>
           {viewType === 'calendar' ? (
-            <div className="text-center py-8 text-gray-500">
-              <Calendar className="h-16 w-16 mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">Vista de Calendario</h3>
-              <p>La implementación completa del calendario estará disponible en la próxima actualización.</p>
-              <p className="text-sm mt-2">Por ahora, utiliza la vista de lista para ver las asignaciones.</p>
+            <div className="space-y-4">
+              {/* Encabezados de días de la semana */}
+              <div className="grid grid-cols-7 gap-1 mb-2">
+                {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((day) => (
+                  <div key={day} className="p-2 text-center text-sm font-medium text-gray-500">
+                    {day}
+                  </div>
+                ))}
+              </div>
+              
+              {/* Días del calendario */}
+              <div className="grid grid-cols-7 gap-1">
+                {calendarDays.map((day) => {
+                  const dayAssignments = getAssignmentsForDay(day)
+                  const holiday = getHolidayForDay(day)
+                  const dayType = getDayType(day)
+                  const isCurrentMonth = isSameMonth(day, selectedMonth)
+                  const isToday = isSameDay(day, new Date())
+                  
+                  return (
+                    <div
+                      key={day.toISOString()}
+                      className={`
+                        min-h-[120px] p-2 border rounded-lg transition-colors
+                        ${
+                          isCurrentMonth
+                            ? 'bg-white border-gray-200'
+                            : 'bg-gray-50 border-gray-100 text-gray-400'
+                        }
+                        ${
+                          isToday
+                            ? 'ring-2 ring-blue-500 bg-blue-50'
+                            : ''
+                        }
+                        ${
+                          dayType === 'festivo'
+                            ? 'bg-red-50 border-red-200'
+                            : dayType === 'fin_semana'
+                            ? 'bg-gray-100 border-gray-200'
+                            : ''
+                        }
+                      `}
+                    >
+                      {/* Número del día */}
+                      <div className="flex items-center justify-between mb-1">
+                        <span className={`
+                          text-sm font-medium
+                          ${
+                            isToday
+                              ? 'text-blue-600'
+                              : isCurrentMonth
+                              ? 'text-gray-900'
+                              : 'text-gray-400'
+                          }
+                        `}>
+                          {format(day, 'd')}
+                        </span>
+                        
+                        {/* Indicadores de tipo de día */}
+                        <div className="flex space-x-1">
+                          {dayType === 'festivo' && (
+                            <div className="w-2 h-2 bg-red-500 rounded-full" title="Festivo" />
+                          )}
+                          {dayType === 'fin_semana' && (
+                            <div className="w-2 h-2 bg-gray-500 rounded-full" title="Fin de semana" />
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Festivo */}
+                      {holiday && isCurrentMonth && (
+                        <div className="mb-1">
+                          <Badge variant="destructive" className="text-xs px-1 py-0">
+                            {holiday.name.length > 15 ? holiday.name.substring(0, 15) + '...' : holiday.name}
+                          </Badge>
+                        </div>
+                      )}
+                      
+                      {/* Asignaciones */}
+                      {isCurrentMonth && dayAssignments.length > 0 && (
+                        <div className="space-y-1">
+                          {dayAssignments.slice(0, 2).map((assignment) => {
+                            const worker = workers?.find(w => w.id === assignment.worker_id)
+                            const user = users?.find(u => u.id === assignment.user_id)
+                            
+                            return (
+                              <div
+                                key={assignment.id}
+                                className="text-xs p-1 bg-blue-100 text-blue-800 rounded truncate"
+                                title={`${worker?.full_name} → ${user?.full_name}`}
+                              >
+                                {worker?.full_name?.split(' ')[0]} → {user?.full_name?.split(' ')[0]}
+                              </div>
+                            )
+                          })}
+                          
+                          {dayAssignments.length > 2 && (
+                            <div className="text-xs text-gray-500 text-center">
+                              +{dayAssignments.length - 2} más
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+              
+              {/* Leyenda */}
+              <div className="flex items-center justify-center space-x-6 pt-4 border-t">
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                  <span className="text-sm text-gray-600">Festivo</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-gray-500 rounded-full"></div>
+                  <span className="text-sm text-gray-600">Fin de semana</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                  <span className="text-sm text-gray-600">Asignación</span>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="space-y-4">
@@ -248,7 +424,7 @@ export default function PlanningPage() {
                         </Badge>
                       </div>
                       <div className="text-sm text-gray-600 space-y-1">
-                        <p><strong>Cliente:</strong> {user?.full_name}</p>
+                        <p><strong>Usuario:</strong> {user?.full_name}</p>
                         <p><strong>Dirección:</strong> {user?.address}</p>
                         <p><strong>Período:</strong> {format(new Date(assignment.start_date), 'dd/MM/yyyy')} - {assignment.end_date ? format(new Date(assignment.end_date), 'dd/MM/yyyy') : 'Indefinido'}</p>
                         {assignment.notes && (

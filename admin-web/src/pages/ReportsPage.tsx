@@ -1,10 +1,11 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useMonthlyReports, useGenerateMonthlyReport, useExportMonthlyReport, type MonthlyReportData } from '@/hooks/useReports'
 import { useWorkers } from '@/hooks/useWorkers'
 import { useUsers } from '@/hooks/useUsers'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Select,
   SelectContent,
@@ -39,7 +40,11 @@ import {
   Clock,
   User,
   FileSpreadsheet,
-  Loader2
+  Loader2,
+  PieChart,
+  Activity,
+  Target,
+  AlertTriangle
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -144,14 +149,45 @@ export default function ReportsPage() {
     setIsDetailOpen(true)
   }
 
-  // Calcular estadisticas generales
-  const stats = reports ? {
-    totalReports: reports.length,
-    totalAssignedHours: reports.reduce((sum, r) => sum + r.assigned_hours, 0),
-    totalCalculatedHours: reports.reduce((sum, r) => sum + r.calculated_hours, 0),
-    totalExcess: reports.reduce((sum, r) => sum + Math.max(0, r.excess_deficit_hours), 0),
-    totalDeficit: reports.reduce((sum, r) => sum + Math.min(0, r.excess_deficit_hours), 0)
-  } : null
+  // Calcular estadisticas generales y avanzadas
+  const stats = useMemo(() => {
+    if (!reports || reports.length === 0) return null
+    
+    const totalReports = reports.length
+    const totalAssignedHours = reports.reduce((sum, r) => sum + r.assigned_hours, 0)
+    const totalCalculatedHours = reports.reduce((sum, r) => sum + r.calculated_hours, 0)
+    const totalExcess = reports.reduce((sum, r) => sum + Math.max(0, r.excess_deficit_hours), 0)
+    const totalDeficit = reports.reduce((sum, r) => sum + Math.min(0, r.excess_deficit_hours), 0)
+    
+    // Estadísticas avanzadas
+    const reportsWithExcess = reports.filter(r => r.excess_deficit_hours > 0).length
+    const reportsWithDeficit = reports.filter(r => r.excess_deficit_hours < 0).length
+    const reportsBalanced = reports.filter(r => r.excess_deficit_hours === 0).length
+    
+    const efficiency = totalAssignedHours > 0 ? (totalCalculatedHours / totalAssignedHours) * 100 : 0
+    const averageHoursPerReport = totalReports > 0 ? totalCalculatedHours / totalReports : 0
+    
+    // Distribución por tipo de día
+    const totalWorkingDays = reports.reduce((sum, r) => sum + r.working_days, 0)
+    const totalHolidayDays = reports.reduce((sum, r) => sum + r.holiday_days, 0)
+    const totalWeekendDays = reports.reduce((sum, r) => sum + r.weekend_days, 0)
+    
+    return {
+      totalReports,
+      totalAssignedHours,
+      totalCalculatedHours,
+      totalExcess,
+      totalDeficit,
+      reportsWithExcess,
+      reportsWithDeficit,
+      reportsBalanced,
+      efficiency,
+      averageHoursPerReport,
+      totalWorkingDays,
+      totalHolidayDays,
+      totalWeekendDays
+    }
+  }, [reports])
 
   return (
     <div className="space-y-6">
@@ -257,14 +293,14 @@ export default function ReportsPage() {
 
             <div>
               <label className="text-sm font-medium text-gray-700 mb-2 block">
-                Cliente (Opcional)
+                Usuario (Opcional)
               </label>
               <Select value={selectedUserId} onValueChange={(value) => setSelectedUserId(value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Todos los clientes" />
+                  <SelectValue placeholder="Todos los usuarios" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos los clientes</SelectItem>
+                  <SelectItem value="all">Todos los usuarios</SelectItem>
                   {users?.filter(u => u.is_active).map(user => (
                     <SelectItem key={user.id} value={user.id}>
                       {user.full_name}
@@ -296,73 +332,140 @@ export default function ReportsPage() {
         </CardContent>
       </Card>
 
-      {/* Estadisticas generales */}
-      {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center">
-                <FileText className="h-8 w-8 text-blue-500" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Total Reportes</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.totalReports}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+      {/* Tabs para diferentes vistas */}
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="overview">Resumen</TabsTrigger>
+          <TabsTrigger value="analytics">Análisis</TabsTrigger>
+          <TabsTrigger value="reports">Reportes</TabsTrigger>
+          <TabsTrigger value="comparison">Comparación</TabsTrigger>
+        </TabsList>
 
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center">
-                <Calendar className="h-8 w-8 text-green-500" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Horas Contratadas</p>
-                  <p className="text-2xl font-bold text-gray-900">{Math.round(stats.totalAssignedHours)}h</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        <TabsContent value="overview" className="space-y-6">
+          {/* Estadisticas generales */}
+          {stats && (
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center">
+                    <FileText className="h-8 w-8 text-blue-500" />
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-600">Total Reportes</p>
+                      <p className="text-2xl font-bold text-gray-900">{stats.totalReports}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center">
-                <Clock className="h-8 w-8 text-purple-500" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Horas Calculadas</p>
-                  <p className="text-2xl font-bold text-gray-900">{Math.round(stats.totalCalculatedHours)}h</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center">
+                    <Calendar className="h-8 w-8 text-green-500" />
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-600">Horas Contratadas</p>
+                      <p className="text-2xl font-bold text-gray-900">{Math.round(stats.totalAssignedHours)}h</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center">
-                <TrendingUp className="h-8 w-8 text-green-600" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Exceso Total</p>
-                  <p className="text-2xl font-bold text-green-600">+{Math.round(stats.totalExcess)}h</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center">
+                    <Clock className="h-8 w-8 text-purple-500" />
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-600">Horas Calculadas</p>
+                      <p className="text-2xl font-bold text-gray-900">{Math.round(stats.totalCalculatedHours)}h</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center">
-                <TrendingDown className="h-8 w-8 text-red-600" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Deficit Total</p>
-                  <p className="text-2xl font-bold text-red-600">{Math.round(stats.totalDeficit)}h</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center">
+                    <TrendingUp className="h-8 w-8 text-green-600" />
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-600">Exceso Total</p>
+                      <p className="text-2xl font-bold text-green-600">+{Math.round(stats.totalExcess)}h</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-      {/* Tabla de reportes */}
-      <Card>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center">
+                    <TrendingDown className="h-8 w-8 text-red-600" />
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-600">Deficit Total</p>
+                      <p className="text-2xl font-bold text-red-600">{Math.round(stats.totalDeficit)}h</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-6">
+          {/* Estadísticas avanzadas */}
+          {stats && (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center">
+                    <Activity className="h-8 w-8 text-blue-500" />
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-600">Eficiencia</p>
+                      <p className="text-2xl font-bold text-gray-900">{Math.round(stats.efficiency)}%</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center">
+                    <Target className="h-8 w-8 text-green-500" />
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-600">Promedio Horas</p>
+                      <p className="text-2xl font-bold text-gray-900">{Math.round(stats.averageHoursPerReport)}h</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center">
+                    <PieChart className="h-8 w-8 text-purple-500" />
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-600">Con Exceso</p>
+                      <p className="text-2xl font-bold text-green-600">{stats.reportsWithExcess}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center">
+                    <AlertTriangle className="h-8 w-8 text-red-500" />
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-600">Con Déficit</p>
+                      <p className="text-2xl font-bold text-red-600">{stats.reportsWithDeficit}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="reports" className="space-y-6">
+          {/* Tabla de reportes */}
+          <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <BarChart3 className="h-5 w-5" />
@@ -383,7 +486,7 @@ export default function ReportsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Cliente</TableHead>
+                  <TableHead>Usuario</TableHead>
                   <TableHead>Trabajadora</TableHead>
                   <TableHead>Horas Contratadas</TableHead>
                   <TableHead>Horas Calculadas</TableHead>
@@ -476,6 +579,23 @@ export default function ReportsPage() {
           )}
         </CardContent>
       </Card>
+        </TabsContent>
+
+        <TabsContent value="comparison" className="space-y-6">
+          {/* Comparación temporal */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Comparación Temporal</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-center py-8">
+                <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-600">Funcionalidad de comparación en desarrollo</p>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Dialog de detalles del reporte */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
@@ -507,7 +627,7 @@ function ReportDetails({ report }: { report: MonthlyReportData }) {
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <User className="h-4 w-4" />
-              Cliente
+              Usuario
             </CardTitle>
           </CardHeader>
           <CardContent>

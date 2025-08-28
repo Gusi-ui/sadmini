@@ -23,26 +23,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
 
+  const createProfile = useCallback(async (userId: string, currentUser?: User) => {
+    console.log('📝 Creando nuevo perfil para usuario:', userId)
+    try {
+      const newProfile = {
+        id: userId,
+        email: currentUser?.email || '',
+        full_name: currentUser?.user_metadata?.full_name || 'Usuario',
+        role: (currentUser?.user_metadata?.role as 'admin' | 'worker') || 'admin',
+        phone: null,
+        address: null
+      }
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert(newProfile)
+        .select()
+        .single()
+
+      if (error) {
+        console.error('❌ Error creando perfil:', error)
+        toast.error('Error al crear el perfil de usuario')
+        return
+      }
+
+      console.log('✅ Perfil creado exitosamente:', data)
+      setProfile(data)
+      toast.success('Perfil creado exitosamente')
+    } catch (error) {
+      console.error('❌ Error en createProfile:', error)
+    }
+  }, [])
+
   const loadProfile = useCallback(async (userId: string, currentUser?: User) => {
     console.log('📋 Iniciando carga de perfil para usuario:', userId)
     try {
-      // Si estamos en modo mock, crear perfil simulado
-      if (userId.startsWith('mock-')) {
-        console.log('🎭 Modo mock detectado, creando perfil simulado')
-        const mockProfile: Profile = {
-          id: userId,
-          email: userId === 'mock-admin-id' ? 'admin@sadmini.com' : 'trabajadora@sadmini.com',
-          full_name: userId === 'mock-admin-id' ? 'Administrador del Sistema' : 'María García López',
-          role: userId === 'mock-admin-id' ? 'admin' : 'worker',
-          phone: '+34600000000',
-          address: 'Dirección de prueba',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }
-        setProfile(mockProfile)
-        console.log('✅ Perfil mock creado:', mockProfile)
-        return
-      }
 
       console.log('🔍 Consultando perfil en Supabase...')
       const { data, error } = await supabase
@@ -53,10 +68,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) {
         console.error('❌ Error loading profile:', error)
-        if (error.code !== 'PGRST116') {
+        if (error.code === 'PGRST116') {
+          // Perfil no encontrado, crear uno nuevo
+          console.log('📝 Perfil no encontrado, creando nuevo perfil...')
+          await createProfile(userId, currentUser)
+        } else {
           toast.error('Error al cargar el perfil de usuario')
+          setProfile(null)
         }
-        setProfile(null)
         return
       }
 
@@ -65,22 +84,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('❌ Error loading profile (catch):', error)
       
-      console.log('🔧 Creando perfil temporal...')
-      // Crear un perfil temporal basado en el usuario
-      const tempProfile = {
-        id: userId,
-        email: currentUser?.email || '',
-        full_name: currentUser?.user_metadata?.full_name || 'Usuario',
-        role: currentUser?.user_metadata?.role || 'admin',
-        phone: null,
-        address: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      }
-      setProfile(tempProfile)
-      console.log('🔧 Perfil temporal creado:', tempProfile)
+      console.log('🔧 Intentando crear perfil...')
+      await createProfile(userId, currentUser)
     }
-  }, [])
+  }, [createProfile])
 
   // Load user on mount
   useEffect(() => {

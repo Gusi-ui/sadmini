@@ -4,6 +4,10 @@
 // =====================================================
 
 import { createClient } from '@supabase/supabase-js'
+import dotenv from 'dotenv'
+
+// Cargar variables de entorno desde .env
+dotenv.config()
 
 // Configuración de Supabase desde variables de entorno
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
