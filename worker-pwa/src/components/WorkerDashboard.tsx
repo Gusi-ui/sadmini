@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
@@ -53,7 +53,7 @@ export const WorkerDashboard: React.FC<WorkerDashboardProps> = ({ className }) =
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadAssignments = async () => {
+  const loadAssignments = useCallback(async () => {
     console.log('🔍 WorkerDashboard: loadAssignments called');
     console.log('🔍 WorkerDashboard: worker object:', worker);
     console.log('🔍 WorkerDashboard: worker?.id:', worker?.id);
@@ -137,7 +137,7 @@ export const WorkerDashboard: React.FC<WorkerDashboardProps> = ({ className }) =
       console.log('🏁 WorkerDashboard: Setting loading to false - assignments loading complete');
       setLoading(false);
     }
-  };
+  }, [worker?.id]);
 
   useEffect(() => {
     console.log('🔄 WorkerDashboard: useEffect triggered');
@@ -150,7 +150,7 @@ export const WorkerDashboard: React.FC<WorkerDashboardProps> = ({ className }) =
     } else {
       console.log('⚠️ WorkerDashboard: No worker available, skipping loadAssignments');
     }
-  }, [worker]);
+  }, [loadAssignments, worker?.id]);
 
   const getDateLabel = (startDate: string, endDate: string) => {
     const start = parseISO(startDate);

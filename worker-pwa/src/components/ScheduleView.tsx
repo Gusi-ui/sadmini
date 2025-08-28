@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
@@ -93,7 +93,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ className }) => {
     return assignment.status === statusFilter;
   });
 
-  const loadWeekAssignments = async () => {
+  const loadWeekAssignments = useCallback(async () => {
     if (!worker?.id) return;
 
     try {
@@ -133,7 +133,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ className }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [worker?.id, weekStart, weekEnd]);
 
   const updateAssignmentStatus = async (assignmentId: string, newStatus: Assignment['status'], completionNotes?: string) => {
     try {
@@ -425,7 +425,7 @@ export const ScheduleView: React.FC<ScheduleViewProps> = ({ className }) => {
 
   useEffect(() => {
     loadWeekAssignments();
-  }, [worker?.id, currentWeek]);
+  }, [loadWeekAssignments]);
 
   const getAssignmentsForDay = (day: Date) => {
     const dayStr = format(day, 'yyyy-MM-dd');

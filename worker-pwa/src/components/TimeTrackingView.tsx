@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
@@ -50,23 +50,7 @@ export const TimeTrackingView: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadTimeData();
-  }, [worker, currentWeek]);
-
-  useEffect(() => {
-    // Actualizar cada minuto si hay una entrada activa
-    const interval = setInterval(() => {
-      if (activeEntry) {
-        // Forzar re-render para actualizar el tiempo transcurrido
-        setActiveEntry({ ...activeEntry });
-      }
-    }, 60000); // Cada minuto
-
-    return () => clearInterval(interval);
-  }, [activeEntry]);
-
-  const loadTimeData = async () => {
+  const loadTimeData = useCallback(async () => {
     if (!worker?.id) return;
 
     try {
@@ -184,7 +168,23 @@ export const TimeTrackingView: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [worker?.id, currentWeek]);
+
+  useEffect(() => {
+    loadTimeData();
+  }, [loadTimeData]);
+
+  useEffect(() => {
+    // Actualizar cada minuto si hay una entrada activa
+    const interval = setInterval(() => {
+      if (activeEntry) {
+        // Forzar re-render para actualizar el tiempo transcurrido
+        setActiveEntry({ ...activeEntry });
+      }
+    }, 60000); // Cada minuto
+
+    return () => clearInterval(interval);
+  }, [activeEntry]);
 
   const startTimer = async (assignmentId: string) => {
     try {

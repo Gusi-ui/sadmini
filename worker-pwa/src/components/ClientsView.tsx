@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -38,11 +38,7 @@ export const ClientsView: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadClientsData();
-  }, [worker]);
-
-  const loadClientsData = async () => {
+  const loadClientsData = useCallback(async () => {
     console.log('🔍 ClientsView: Loading clients data, worker:', worker);
     if (!worker?.id) {
       console.log('❌ ClientsView: No worker ID found');
@@ -117,7 +113,11 @@ export const ClientsView: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [worker]);
+
+  useEffect(() => {
+    loadClientsData();
+  }, [worker, loadClientsData]);
 
   const getClientAssignments = (clientId: string) => {
     return assignments.filter(assignment => assignment.client_id === clientId);
