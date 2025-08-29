@@ -137,7 +137,7 @@ export const WorkerDashboard: React.FC<WorkerDashboardProps> = ({ className }) =
       console.log('🏁 WorkerDashboard: Setting loading to false - assignments loading complete');
       setLoading(false);
     }
-  }, [worker?.id]);
+  }, [user, worker]);
 
   useEffect(() => {
     console.log('🔄 WorkerDashboard: useEffect triggered');
@@ -150,7 +150,7 @@ export const WorkerDashboard: React.FC<WorkerDashboardProps> = ({ className }) =
     } else {
       console.log('⚠️ WorkerDashboard: No worker available, skipping loadAssignments');
     }
-  }, [loadAssignments, worker?.id]);
+  }, [loadAssignments, worker?.id, loading]);
 
   const getDateLabel = (startDate: string, endDate: string) => {
     const start = parseISO(startDate);

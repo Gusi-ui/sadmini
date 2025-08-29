@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import type { User, Session } from '@supabase/supabase-js';
 
@@ -50,7 +50,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const loadWorkerData = async (userEmail: string) => {
+  const loadWorkerData = useCallback(async (userEmail: string) => {
     try {
       console.log('🔍 AuthContext: Loading worker data for email:', userEmail);
       console.log('🔍 AuthContext: Current loading state:', loading);
@@ -74,7 +74,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       console.error('❌ AuthContext: Exception in loadWorkerData:', error);
       setWorker(null);
     }
-  };
+  }, [loading]);
 
   const refreshWorkerData = async () => {
     if (user?.email) {
@@ -199,7 +199,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [loadWorkerData, loading]);
 
   const value: AuthContextType = {
     user,

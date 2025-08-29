@@ -74,7 +74,7 @@ export default function WorkerForm({ worker, onSubmit, onCancel, isLoading = fal
       }
       generateCode()
     }
-  }, [])
+  }, [worker, setValue])
 
   const handleGeneratePassword = () => {
     const newPassword = generateTemporaryPassword()

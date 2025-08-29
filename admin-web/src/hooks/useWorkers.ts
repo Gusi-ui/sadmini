@@ -64,11 +64,23 @@ export function useCreateWorker() {
           employeeId = await generateEmployeeCode()
         }
 
-        // 2. Crear usuario en Supabase Auth con la contraseña temporal
+        // 2. Verificar si ya existe un usuario con este email
         if (!supabaseAdmin) {
           throw new Error('Cliente de administrador no disponible. Verifica la configuración de VITE_SUPABASE_SERVICE_ROLE_KEY')
         }
 
+        // Verificar si el email ya existe en la tabla workers
+        const { data: existingWorker } = await supabase
+          .from('workers')
+          .select('email')
+          .eq('email', data.email)
+          .single()
+
+        if (existingWorker) {
+          throw new Error('Ya existe una trabajadora registrada con este email')
+        }
+
+        // 3. Crear usuario en Supabase Auth con la contraseña temporal
         const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
           email: data.email,
           password: data.temporary_password!,
@@ -83,10 +95,25 @@ export function useCreateWorker() {
         })
 
         if (authError) {
+          // Si el error es por email duplicado, verificar si es un usuario huérfano
+          if (authError.message.includes('already been registered')) {
+            // Verificar si existe en la tabla workers
+            const { data: existingWorkerByEmail } = await supabase
+              .from('workers')
+              .select('id')
+              .eq('email', data.email)
+              .single()
+            
+            if (!existingWorkerByEmail) {
+              throw new Error(`Este email ya está registrado en Auth pero no como trabajadora. Esto indica un usuario huérfano. Ve a la sección de "Limpiar Usuarios Huérfanos" e introduce el email: ${data.email} para eliminarlo y poder crear la trabajadora correctamente.`)
+            } else {
+              throw new Error('Ya existe una trabajadora registrada con este email')
+            }
+          }
           throw new Error(`Error al crear usuario: ${authError.message}`)
         }
 
-        // 3. Crear registro en la tabla workers
+        // 4. Crear registro en la tabla workers
         const workerData: WorkerInsert = {
           id: authUser.user.id, // Usar el mismo ID del usuario Auth
           employee_id: employeeId,
@@ -332,6 +359,270 @@ export function useWorkerStats() {
         active,
         inactive
       }
+    }
+  })
+}
+
+// Hook para limpiar usuarios huérfanos (existen en Auth pero no en workers)
+export function useCleanOrphanUsers() {
+  return useMutation<{ deletedUserId: string; email: string }, Error, string>({
+    mutationFn: async (email: string) => {
+      try {
+        if (!supabaseAdmin) {
+          throw new Error('Cliente de administrador no disponible')
+        }
+
+        console.log('🔍 Buscando usuario huérfano con email:', email)
+
+        // Buscar el usuario en Supabase Auth por email
+        const { data: authUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers()
+        
+        if (listError) {
+          console.error('❌ Error al listar usuarios:', listError)
+          throw new Error(`Error al buscar usuarios: ${listError.message}`)
+        }
+
+        console.log('📋 Total de usuarios en Auth:', authUsers.users.length)
+
+        const orphanUser = authUsers.users.find((user: any) => user.email === email)
+        
+        if (!orphanUser) {
+          throw new Error('No se encontró ningún usuario con este email en Auth')
+        }
+
+        console.log('👤 Usuario encontrado:', {
+          id: orphanUser.id,
+          email: orphanUser.email,
+          created_at: orphanUser.created_at
+        })
+
+        const userEmail = orphanUser.email || email
+
+        // Verificar que no existe en la tabla workers
+        const { data: workerExists, error: workerCheckError } = await supabase
+          .from('workers')
+          .select('id')
+          .eq('id', orphanUser.id)
+          .single()
+
+        if (workerCheckError && workerCheckError.code !== 'PGRST116') {
+          console.error('❌ Error al verificar trabajadora:', workerCheckError)
+          throw new Error(`Error al verificar trabajadora: ${workerCheckError.message}`)
+        }
+
+        if (workerExists) {
+          throw new Error('Este usuario ya existe en la tabla de trabajadoras')
+        }
+
+        console.log('✅ Confirmado: Usuario huérfano (no existe en workers)')
+
+        // Eliminar manualmente todas las referencias para evitar problemas de restricciones
+        console.log('🧹 Eliminando todas las referencias manualmente...')
+
+        // 1. Primero obtener el worker_id si existe
+        const { data: workerData } = await supabase
+          .from('workers')
+          .select('id')
+          .eq('profile_id', orphanUser.id)
+          .single()
+        
+        const workerId = workerData?.id
+        console.log('🔍 Worker ID encontrado:', workerId)
+
+        // 2. Eliminar assignment_time_slots (a través de assignments)
+        if (workerId) {
+          // Primero obtener los assignment IDs
+          const { data: assignmentIds } = await supabase
+            .from('assignments')
+            .select('id')
+            .eq('worker_id', workerId)
+          
+          if (assignmentIds && assignmentIds.length > 0) {
+            const { error: timeSlotsDeleteError } = await supabase
+              .from('assignment_time_slots')
+              .delete()
+              .in('assignment_id', assignmentIds.map(a => a.id))
+            
+            if (timeSlotsDeleteError) {
+              console.warn('⚠️ Error al eliminar assignment_time_slots:', timeSlotsDeleteError.message)
+            } else {
+              console.log('✅ Assignment time slots eliminados correctamente')
+            }
+          }
+        }
+
+        // 3. Eliminar system_alerts (solo por resolved_by)
+        const { error: alertsDeleteError } = await supabase
+          .from('system_alerts')
+          .delete()
+          .eq('resolved_by', orphanUser.id)
+        
+        if (alertsDeleteError) {
+          console.warn('⚠️ Error al eliminar system_alerts:', alertsDeleteError.message)
+        } else {
+          console.log('✅ System alerts eliminados correctamente')
+        }
+
+        // 4. Eliminar system_alerts por related_entity_id si es el worker
+        if (workerId) {
+          const { error: alertsWorkerDeleteError } = await supabase
+            .from('system_alerts')
+            .delete()
+            .eq('related_entity_id', workerId)
+          
+          if (alertsWorkerDeleteError) {
+            console.warn('⚠️ Error al eliminar system_alerts por worker:', alertsWorkerDeleteError.message)
+          } else {
+            console.log('✅ System alerts por worker eliminados correctamente')
+          }
+        }
+
+        // 5. Eliminar assignments relacionadas con este usuario
+        if (workerId) {
+          const { error: assignmentsByWorkerError } = await supabase
+            .from('assignments')
+            .delete()
+            .eq('worker_id', workerId)
+          
+          if (assignmentsByWorkerError) {
+            console.warn('⚠️ Error al eliminar assignments por worker_id:', assignmentsByWorkerError.message)
+          } else {
+            console.log('✅ Assignments por worker_id eliminadas correctamente')
+          }
+        }
+
+        const { error: assignmentsByUserError } = await supabase
+          .from('assignments')
+          .delete()
+          .eq('user_id', orphanUser.id)
+        
+        if (assignmentsByUserError) {
+          console.warn('⚠️ Error al eliminar assignments por user_id:', assignmentsByUserError.message)
+        } else {
+          console.log('✅ Assignments por user_id eliminadas correctamente')
+        }
+
+        // 6. Eliminar monthly_reports
+        if (workerId) {
+          const { error: monthlyReportsByWorkerError } = await supabase
+            .from('monthly_reports')
+            .delete()
+            .eq('worker_id', workerId)
+          
+          if (monthlyReportsByWorkerError) {
+            console.warn('⚠️ Error al eliminar monthly_reports por worker_id:', monthlyReportsByWorkerError.message)
+          } else {
+            console.log('✅ Monthly reports por worker_id eliminados correctamente')
+          }
+        }
+
+        const { error: monthlyReportsByUserError } = await supabase
+          .from('monthly_reports')
+          .delete()
+          .eq('user_id', orphanUser.id)
+        
+        if (monthlyReportsByUserError) {
+          console.warn('⚠️ Error al eliminar monthly_reports por user_id:', monthlyReportsByUserError.message)
+        } else {
+          console.log('✅ Monthly reports por user_id eliminados correctamente')
+        }
+
+        // 7. Eliminar work_hours
+        if (workerId) {
+          const { error: workHoursDeleteError } = await supabase
+            .from('work_hours')
+            .delete()
+            .eq('worker_id', workerId)
+          
+          if (workHoursDeleteError) {
+            console.warn('⚠️ Error al eliminar work_hours:', workHoursDeleteError.message)
+          } else {
+            console.log('✅ Work hours eliminadas correctamente')
+          }
+        }
+
+        // 8. Eliminar holidays
+        if (workerId) {
+          const { error: holidaysDeleteError } = await supabase
+            .from('holidays')
+            .delete()
+            .eq('worker_id', workerId)
+          
+          if (holidaysDeleteError) {
+            console.warn('⚠️ Error al eliminar holidays:', holidaysDeleteError.message)
+          } else {
+            console.log('✅ Holidays eliminados correctamente')
+          }
+        }
+
+        // 9. Eliminar de workers
+        if (workerId) {
+          const { error: workerDeleteError } = await supabase
+            .from('workers')
+            .delete()
+            .eq('id', workerId)
+          
+          if (workerDeleteError) {
+            console.warn('⚠️ Error al eliminar worker:', workerDeleteError.message)
+          } else {
+            console.log('✅ Worker eliminado correctamente')
+          }
+        }
+
+        // 10. Eliminar de la tabla profiles
+        console.log('🗑️ Eliminando perfil...')
+        const { error: profileDeleteError } = await supabase
+          .from('profiles')
+          .delete()
+          .eq('id', orphanUser.id)
+        
+        if (profileDeleteError) {
+          console.warn('⚠️ Error al eliminar perfil:', profileDeleteError.message)
+        } else {
+          console.log('✅ Perfil eliminado correctamente')
+        }
+
+        // 11. Intentar eliminar el usuario huérfano de Auth
+        console.log('🗑️ Eliminando usuario de Auth...')
+        const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(orphanUser.id)
+        
+        if (deleteError) {
+          console.error('❌ Error detallado al eliminar usuario:', {
+            message: deleteError.message,
+            status: deleteError.status
+          })
+          
+          // Proporcionar mensajes de error más específicos
+          if (deleteError.message.includes('Database error')) {
+            throw new Error('Error de base de datos: Aún existen referencias que impiden la eliminación. Es posible que necesites contactar al administrador del sistema.')
+          } else if (deleteError.message.includes('User not found')) {
+            throw new Error('El usuario ya no existe en el sistema de autenticación.')
+          } else {
+            throw new Error(`Error al eliminar usuario huérfano: ${deleteError.message}`)
+          }
+        }
+
+        console.log('✅ Usuario eliminado correctamente')
+
+        return {
+          deletedUserId: orphanUser.id,
+          email: userEmail
+        }
+      } catch (error) {
+        console.error('Error en useCleanOrphanUsers:', error)
+        throw error
+      }
+    },
+    onSuccess: (result) => {
+      toast.success(
+        `Usuario huérfano eliminado correctamente`,
+        {
+          description: `Email: ${result.email}. Ahora puedes crear la trabajadora nuevamente.`
+        }
+      )
+    },
+    onError: (error: Error) => {
+      toast.error(`Error al limpiar usuario huérfano: ${error.message}`)
     }
   })
 }
