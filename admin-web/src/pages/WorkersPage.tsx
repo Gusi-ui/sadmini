@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useWorkers, useCreateWorker, useUpdateWorker, useToggleWorkerStatus } from '@/hooks/useWorkers'
+import { useWorkers, useCreateWorker, useUpdateWorker, useToggleWorkerStatus, useResetWorkerPassword } from '@/hooks/useWorkers'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -42,11 +42,13 @@ import {
   Mail,
   MapPin,
   Calendar,
-  RefreshCw
+  RefreshCw,
+  Key
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import WorkerForm from '@/components/forms/WorkerForm'
+import ResetPasswordDialog from '@/components/dialogs/ResetPasswordDialog'
 import type { Database } from '@/lib/supabase'
 
 type Worker = Database['public']['Tables']['workers']['Row']
@@ -57,12 +59,15 @@ export default function WorkersPage() {
   const [selectedWorker, setSelectedWorker] = useState<Worker | null>(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
+  const [resetPasswordWorker, setResetPasswordWorker] = useState<Worker | null>(null)
+  const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false)
 
   const { data: activeWorkers, isLoading: activeLoading } = useWorkers(false)
   const { data: allWorkers, isLoading: allLoading } = useWorkers(true)
   const createWorkerMutation = useCreateWorker()
   const updateWorkerMutation = useUpdateWorker()
   const toggleStatusMutation = useToggleWorkerStatus()
+  const resetPasswordMutation = useResetWorkerPassword()
 
   const inactiveWorkers = allWorkers?.filter(worker => !worker.is_active) || []
   
@@ -125,6 +130,21 @@ export default function WorkersPage() {
     setIsFormOpen(true)
   }
 
+  const openResetPasswordDialog = (worker: Worker) => {
+    setResetPasswordWorker(worker)
+    setIsResetPasswordOpen(true)
+  }
+
+  const handleResetPassword = async (workerId: string, newPassword: string) => {
+    try {
+      await resetPasswordMutation.mutateAsync({ workerId, newPassword })
+      setIsResetPasswordOpen(false)
+      setResetPasswordWorker(null)
+    } catch (error) {
+      // Error is handled by the mutation
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -179,6 +199,7 @@ export default function WorkersPage() {
             isLoading={isLoading}
             onEdit={openEditForm}
             onToggleStatus={handleToggleStatus}
+            onResetPassword={openResetPasswordDialog}
             showActivateButton={false}
           />
         </TabsContent>
@@ -200,6 +221,7 @@ export default function WorkersPage() {
                 isLoading={isLoading}
                 onEdit={openEditForm}
                 onToggleStatus={handleToggleStatus}
+                onResetPassword={openResetPasswordDialog}
                 showActivateButton={true}
               />
             </CardContent>
@@ -229,6 +251,20 @@ export default function WorkersPage() {
           />
         </DialogContent>
       </Dialog>
+
+      {/* Dialog para resetear contraseña */}
+       <ResetPasswordDialog
+         worker={resetPasswordWorker}
+         open={isResetPasswordOpen}
+         onOpenChange={(open) => {
+           setIsResetPasswordOpen(open)
+           if (!open) {
+             setResetPasswordWorker(null)
+           }
+         }}
+         onConfirm={handleResetPassword}
+         isLoading={resetPasswordMutation.isPending}
+       />
     </div>
   )
 }
@@ -239,10 +275,11 @@ interface WorkersTableProps {
   isLoading: boolean
   onEdit: (worker: Worker) => void
   onToggleStatus: (worker: Worker) => void
+  onResetPassword: (worker: Worker) => void
   showActivateButton: boolean
 }
 
-function WorkersTable({ workers, isLoading, onEdit, onToggleStatus, showActivateButton }: WorkersTableProps) {
+function WorkersTable({ workers, isLoading, onEdit, onToggleStatus, onResetPassword, showActivateButton }: WorkersTableProps) {
   if (isLoading) {
     return (
       <Card>
@@ -345,6 +382,17 @@ function WorkersTable({ workers, isLoading, onEdit, onToggleStatus, showActivate
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
+                    
+                    {worker.is_active && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => onResetPassword(worker)}
+                        title="Resetear contraseña"
+                      >
+                        <Key className="h-4 w-4" />
+                      </Button>
+                    )}
                     
                     {showActivateButton && !worker.is_active ? (
                       <AlertDialog>

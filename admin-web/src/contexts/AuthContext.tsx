@@ -156,10 +156,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     loadUser()
     
-    return () => {
-      isMounted = false
-    }
-
     // Set up auth listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -173,7 +169,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     )
 
-    return () => subscription.unsubscribe()
+    return () => {
+      isMounted = false
+      subscription.unsubscribe()
+    }
   }, [loadProfile])
 
   async function signIn(email: string, password: string) {

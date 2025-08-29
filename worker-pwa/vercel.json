@@ -27,6 +27,6 @@
     "VITE_APP_NAME": "Worker PWA - Cuidado Domiciliario",
     "VITE_APP_VERSION": "1.0.0",
     "VITE_ENABLE_NOTIFICATIONS": "true",
-    "VITE_ADMIN_URL": "https://admin.cuidado-domestico.com"
+    "VITE_ADMIN_URL": "https://admin-kkf95tpu9-gusis-projects-d8e9cfd5.vercel.app"
   }
 }

@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+const supabaseServiceKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY
 const isDev = import.meta.env.VITE_DEV_MODE === 'true'
 
 console.log('🔍 Variables de entorno:', {
@@ -20,7 +21,22 @@ if (!supabaseUrl || !supabaseAnonKey) {
 // Crear cliente de Supabase real
 const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
+// Crear cliente de administrador para operaciones que requieren permisos elevados
+const supabaseAdmin = supabaseServiceKey 
+  ? createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    })
+  : null
+
 console.log('✅ Cliente de Supabase creado correctamente')
+if (supabaseAdmin) {
+  console.log('✅ Cliente de administrador de Supabase creado correctamente')
+} else {
+  console.warn('⚠️ Cliente de administrador no disponible - falta VITE_SUPABASE_SERVICE_ROLE_KEY')
+}
 
 // Código comentado del cliente mock
 /*
@@ -503,12 +519,10 @@ if (!supabaseUrl || !supabaseAnonKey || supabaseUrl.includes('tu-proyecto') || s
       'Missing or invalid Supabase environment variables. Please check your .env.local file.'
     )
   }
-} else {
-  supabase = createClient(supabaseUrl, supabaseAnonKey)
 }
 */
 
-export { supabase }
+export { supabase, supabaseAdmin }
 
 // Types for the database
 export interface Database {

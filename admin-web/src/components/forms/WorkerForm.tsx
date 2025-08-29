@@ -1,13 +1,14 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { workerSchema, type WorkerFormData } from '@/lib/validations'
+import { generateEmployeeCode, generateTemporaryPassword } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Loader2 } from 'lucide-react'
+import { Loader2, RefreshCw, Eye, EyeOff } from 'lucide-react'
 import type { Database } from '@/lib/supabase'
 
 type Worker = Database['public']['Tables']['workers']['Row']
@@ -20,10 +21,14 @@ interface WorkerFormProps {
 }
 
 export default function WorkerForm({ worker, onSubmit, onCancel, isLoading = false }: WorkerFormProps) {
+  const [showPassword, setShowPassword] = React.useState(false)
+  
   const {
     register,
     handleSubmit,
     formState: { errors },
+    setValue,
+    watch,
     reset
   } = useForm<WorkerFormData>({
     resolver: zodResolver(workerSchema),
@@ -39,7 +44,8 @@ export default function WorkerForm({ worker, onSubmit, onCancel, isLoading = fal
       emergency_contact: worker.emergency_contact || '',
       emergency_phone: worker.emergency_phone || '',
       hire_date: worker.hire_date,
-      notes: worker.notes || ''
+      notes: worker.notes || '',
+      temporary_password: ''
     } : {
       employee_id: '',
       dni: '',
@@ -50,9 +56,30 @@ export default function WorkerForm({ worker, onSubmit, onCancel, isLoading = fal
       emergency_contact: '',
       emergency_phone: '',
       hire_date: new Date().toISOString().split('T')[0],
-      notes: ''
+      notes: '',
+      temporary_password: generateTemporaryPassword()
     }
   })
+
+  // Generar código de empleado automáticamente para nuevas trabajadoras
+  useEffect(() => {
+    if (!worker) {
+      const generateCode = async () => {
+        try {
+          const newCode = await generateEmployeeCode()
+          setValue('employee_id', newCode)
+        } catch (error) {
+          console.error('Error al generar código de empleado:', error)
+        }
+      }
+      generateCode()
+    }
+  }, [])
+
+  const handleGeneratePassword = () => {
+    const newPassword = generateTemporaryPassword()
+    setValue('temporary_password', newPassword)
+  }
 
   const handleFormSubmit = (data: WorkerFormData) => {
     onSubmit(data)
@@ -76,15 +103,23 @@ export default function WorkerForm({ worker, onSubmit, onCancel, isLoading = fal
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="employee_id">Código de Empleado *</Label>
+            <Label htmlFor="employee_id">
+              Código de Empleado {!worker && '(Generado automáticamente)'}
+            </Label>
             <Input
               id="employee_id"
-              placeholder="TRB001"
+              placeholder="EMP001"
               {...register('employee_id')}
               className={errors.employee_id ? 'border-red-500' : ''}
+              readOnly={!worker}
             />
             {errors.employee_id && (
               <p className="text-sm text-red-500">{errors.employee_id.message}</p>
+            )}
+            {!worker && (
+              <p className="text-xs text-gray-500">
+                El código se genera automáticamente al crear una nueva trabajadora.
+              </p>
             )}
           </div>
 
@@ -228,6 +263,57 @@ export default function WorkerForm({ worker, onSubmit, onCancel, isLoading = fal
           )}
         </div>
       </div>
+
+      {/* Contraseña Temporal - Solo para nuevas trabajadoras */}
+      {!worker && (
+        <div className="space-y-4">
+          <h3 className="text-lg font-medium text-gray-900">Acceso al Sistema</h3>
+          
+          <div className="space-y-2">
+            <Label htmlFor="temporary_password">Contraseña Temporal *</Label>
+            <div className="flex space-x-2">
+              <div className="relative flex-1">
+                <Input
+                  id="temporary_password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Contraseña temporal"
+                  {...register('temporary_password')}
+                  className={errors.temporary_password ? 'border-red-500' : ''}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleGeneratePassword}
+                className="px-3"
+              >
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            </div>
+            {errors.temporary_password && (
+              <p className="text-sm text-red-500">{errors.temporary_password.message}</p>
+            )}
+            <p className="text-xs text-gray-500">
+              Esta contraseña será utilizada por la trabajadora para su primer acceso al sistema.
+              Se recomienda que la cambie después del primer inicio de sesión.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Buttons */}
       <div className="flex items-center justify-end space-x-2 pt-6 border-t">

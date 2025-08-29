@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { supabase, type Database } from '@/lib/supabase'
-import { toast } from 'react-hot-toast'
+import { supabase, supabaseAdmin, type Database } from '@/lib/supabase'
+import { generateEmployeeCode } from '@/lib/utils'
+import { toast } from 'sonner'
 import type { WorkerFormData } from '@/lib/validations'
 
 type Worker = Database['public']['Tables']['workers']['Row']
@@ -56,38 +57,86 @@ export function useCreateWorker() {
   
   return useMutation({
     mutationFn: async (data: WorkerFormData) => {
-      const workerData: WorkerInsert = {
-        employee_id: data.employee_id,
-        dni: data.dni,
-        full_name: data.full_name,
-        email: data.email,
-        phone: data.phone,
-        address: data.address,
-        emergency_contact: data.emergency_contact,
-        emergency_phone: data.emergency_phone,
-        hire_date: data.hire_date,
-        notes: data.notes,
-        is_active: true
+      try {
+        // 1. Generar código de empleado si no se proporciona
+        let employeeId = data.employee_id
+        if (!employeeId) {
+          employeeId = await generateEmployeeCode()
+        }
+
+        // 2. Crear usuario en Supabase Auth con la contraseña temporal
+        if (!supabaseAdmin) {
+          throw new Error('Cliente de administrador no disponible. Verifica la configuración de VITE_SUPABASE_SERVICE_ROLE_KEY')
+        }
+
+        const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
+          email: data.email,
+          password: data.temporary_password!,
+          email_confirm: true,
+          user_metadata: {
+            full_name: data.full_name,
+            role: 'worker',
+            phone: data.phone,
+            address: data.address,
+            employee_id: employeeId
+          }
+        })
+
+        if (authError) {
+          throw new Error(`Error al crear usuario: ${authError.message}`)
+        }
+
+        // 3. Crear registro en la tabla workers
+        const workerData: WorkerInsert = {
+          id: authUser.user.id, // Usar el mismo ID del usuario Auth
+          employee_id: employeeId,
+          dni: data.dni,
+          full_name: data.full_name,
+          email: data.email,
+          phone: data.phone,
+          address: data.address,
+          emergency_contact: data.emergency_contact,
+          emergency_phone: data.emergency_phone,
+          hire_date: data.hire_date,
+          notes: data.notes,
+          is_active: true
+        }
+        
+        const { data: result, error: workerError } = await supabase
+          .from('workers')
+          .insert(workerData)
+          .select()
+          .single()
+        
+        if (workerError) {
+          // Si falla la creación del worker, intentar eliminar el usuario Auth
+          if (supabaseAdmin) {
+            await supabaseAdmin.auth.admin.deleteUser(authUser.user.id)
+          }
+          throw new Error(`Error al crear registro de trabajadora: ${workerError.message}`)
+        }
+        
+        return {
+          worker: result as Worker,
+          authUser: authUser.user,
+          temporaryPassword: data.temporary_password
+        }
+      } catch (error) {
+        console.error('Error en useCreateWorker:', error)
+        throw error
       }
-      
-      const { data: result, error } = await supabase
-        .from('workers')
-        .insert(workerData)
-        .select()
-        .single()
-      
-      if (error) {
-        throw new Error(`Error al crear trabajadora: ${error.message}`)
-      }
-      
-      return result as Worker
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['workers'] })
-      toast.success('Trabajadora creada correctamente')
+      toast.success(
+        `Trabajadora creada correctamente. Código: ${result.worker.employee_id}`,
+        {
+          description: 'Se ha enviado un email con las credenciales de acceso.'
+        }
+      )
     },
     onError: (error: Error) => {
-      toast.error(error.message)
+      toast.error(`Error al crear trabajadora: ${error.message}`)
     }
   })
 }
@@ -218,6 +267,45 @@ export function useActiveWorkers() {
       }
       
       return data
+    }
+  })
+}
+
+// Hook para resetear contraseña de una trabajadora
+export function useResetWorkerPassword() {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: async ({ workerId, newPassword }: { workerId: string; newPassword: string }) => {
+      try {
+        // Actualizar contraseña en Supabase Auth
+        if (!supabaseAdmin) {
+          throw new Error('Cliente de administrador no disponible. Verifica la configuración de VITE_SUPABASE_SERVICE_ROLE_KEY')
+        }
+
+        const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.updateUserById(
+          workerId,
+          { password: newPassword }
+        )
+
+        if (authError) {
+          throw new Error(`Error al actualizar contraseña: ${authError.message}`)
+        }
+
+        return {
+          user: authUser.user,
+          newPassword
+        }
+      } catch (error) {
+        console.error('Error en useResetWorkerPassword:', error)
+        throw error
+      }
+    },
+    onSuccess: () => {
+      toast.success('Contraseña actualizada correctamente')
+    },
+    onError: (error: Error) => {
+      toast.error(`Error al resetear contraseña: ${error.message}`)
     }
   })
 }

@@ -5,18 +5,18 @@ import './index.css'
 import './styles/mobile-typography.css'
 import App from './App.tsx'
 
-// Registrar Service Worker
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
-      .then((registration) => {
-        console.log('SW registrado: ', registration);
-      })
-      .catch((registrationError) => {
-        console.log('SW registro falló: ', registrationError);
-      });
-  });
-}
+// Registrar Service Worker - DESHABILITADO TEMPORALMENTE
+// if ('serviceWorker' in navigator) {
+//   window.addEventListener('load', () => {
+//     navigator.serviceWorker.register('/sw.js')
+//       .then((registration) => {
+//         console.log('SW registrado: ', registration);
+//       })
+//       .catch((registrationError) => {
+//         console.log('SW registro falló: ', registrationError);
+//       });
+//   });
+// }
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

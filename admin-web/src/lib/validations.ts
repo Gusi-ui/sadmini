@@ -3,9 +3,9 @@ import { z } from 'zod'
 // Validaciones para trabajadoras
 export const workerSchema = z.object({
   employee_id: z.string()
-    .min(1, 'El código de empleado es obligatorio')
     .max(50, 'El código de empleado no puede tener más de 50 caracteres')
-    .regex(/^[A-Z0-9]+$/, 'El código debe contener solo letras mayúsculas y números'),
+    .regex(/^[A-Z0-9]+$/, 'El código debe contener solo letras mayúsculas y números')
+    .optional(),
   
   dni: z.string()
     .min(1, 'El DNI es obligatorio')
@@ -48,7 +48,12 @@ export const workerSchema = z.object({
   
   notes: z.string()
     .max(1000, 'Las notas no pueden tener más de 1000 caracteres')
-    .optional()
+    .optional(),
+  
+  temporary_password: z.string()
+    .min(6, 'La contraseña debe tener al menos 6 caracteres')
+    .max(50, 'La contraseña no puede tener más de 50 caracteres')
+    .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/, 'La contraseña debe contener al menos una mayúscula, una minúscula y un número')
 })
 
 export type WorkerFormData = z.infer<typeof workerSchema>
