@@ -1,9 +1,10 @@
 import React, { useState } from 'react'
-import { useWorkers, useCreateWorker, useUpdateWorker, useToggleWorkerStatus, useResetWorkerPassword } from '@/hooks/useWorkers'
+import { useWorkers, useCreateWorker, useUpdateWorker, useToggleWorkerStatus, useResetWorkerPassword, useCleanOrphanUsers } from '@/hooks/useWorkers'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Dialog,
@@ -43,7 +44,8 @@ import {
   MapPin,
   Calendar,
   RefreshCw,
-  Key
+  Key,
+  Trash2
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -61,6 +63,8 @@ export default function WorkersPage() {
   const [isEditing, setIsEditing] = useState(false)
   const [resetPasswordWorker, setResetPasswordWorker] = useState<Worker | null>(null)
   const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false)
+  const [isCleanOrphanOpen, setIsCleanOrphanOpen] = useState(false)
+  const [orphanEmail, setOrphanEmail] = useState('')
 
   const { data: activeWorkers, isLoading: activeLoading } = useWorkers(false)
   const { data: allWorkers, isLoading: allLoading } = useWorkers(true)
@@ -68,6 +72,7 @@ export default function WorkersPage() {
   const updateWorkerMutation = useUpdateWorker()
   const toggleStatusMutation = useToggleWorkerStatus()
   const resetPasswordMutation = useResetWorkerPassword()
+  const cleanOrphanMutation = useCleanOrphanUsers()
 
   const inactiveWorkers = allWorkers?.filter(worker => !worker.is_active) || []
   
@@ -145,6 +150,17 @@ export default function WorkersPage() {
     }
   }
 
+  const handleCleanOrphan = () => {
+    if (orphanEmail.trim()) {
+      cleanOrphanMutation.mutate(orphanEmail.trim(), {
+        onSuccess: () => {
+          setIsCleanOrphanOpen(false)
+          setOrphanEmail('')
+        }
+      })
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -155,10 +171,19 @@ export default function WorkersPage() {
             Administra el personal de ayuda domiciliaria
           </p>
         </div>
-        <Button onClick={openCreateForm}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nueva Trabajadora
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => setIsCleanOrphanOpen(true)}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Limpiar Usuarios Huérfanos
+          </Button>
+          <Button onClick={openCreateForm}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nueva Trabajadora
+          </Button>
+        </div>
       </div>
 
       {/* Tabs para activas e inactivas */}
@@ -265,6 +290,58 @@ export default function WorkersPage() {
          onConfirm={handleResetPassword}
          isLoading={resetPasswordMutation.isPending}
        />
+
+      {/* Dialog para limpiar usuarios huérfanos */}
+      <Dialog open={isCleanOrphanOpen} onOpenChange={setIsCleanOrphanOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Limpiar Usuario Huérfano</DialogTitle>
+            <DialogDescription>
+              Introduce el email del usuario que existe en Auth pero no como trabajadora.
+              Esto eliminará el usuario de la autenticación para que puedas crear la trabajadora correctamente.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="orphan-email">Email del usuario huérfano</Label>
+              <Input
+                id="orphan-email"
+                type="email"
+                placeholder="ejemplo@email.com"
+                value={orphanEmail}
+                onChange={(e) => setOrphanEmail(e.target.value)}
+              />
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsCleanOrphanOpen(false)
+                  setOrphanEmail('')
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleCleanOrphan}
+                disabled={!orphanEmail.trim() || cleanOrphanMutation.isPending}
+              >
+                {cleanOrphanMutation.isPending ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Eliminando...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Eliminar Usuario
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

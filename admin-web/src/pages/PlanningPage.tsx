@@ -73,11 +73,30 @@ export default function PlanningPage() {
   
   // Función para obtener asignaciones de un día específico
   const getAssignmentsForDay = (date: Date) => {
+    const dayType = getDayType(date)
+    const dayOfWeek = date.getDay() === 0 ? 7 : date.getDay() // Convertir domingo (0) a 7
+    
     return filteredAssignments?.filter(assignment => {
       const startDate = new Date(assignment.start_date)
       const endDate = assignment.end_date ? new Date(assignment.end_date) : null
       
-      return startDate <= date && (!endDate || endDate >= date) && assignment.is_active
+      // Verificar si la asignación está activa en esta fecha
+      const isActiveOnDate = startDate <= date && (!endDate || endDate >= date) && assignment.is_active
+      
+      if (!isActiveOnDate) return false
+      
+      // Verificar si hay tramos horarios para este tipo de día
+      const hasValidTimeSlot = assignment.time_slots?.some(slot => 
+        slot.is_active && 
+        (
+          // Verificar por tipo de día (laborable, festivo, fin_semana)
+          slot.day_type === dayType ||
+          // O verificar por día específico de la semana
+          (slot.day_of_week === dayOfWeek && dayType === 'laborable')
+        )
+      )
+      
+      return hasValidTimeSlot
     }) || []
   }
   
